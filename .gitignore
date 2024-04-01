@@ -1,5 +1,9 @@
 # compiled
 __pycache__
+*.so
+mcubes.cpp
+simplify_mesh.cpp
+ssl
 
 # output
 output
