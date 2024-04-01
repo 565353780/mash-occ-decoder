@@ -13,9 +13,6 @@ class MashDataset(Dataset):
         self.dir_dataset = os.path.join(
             MASH_DECODER_CONFIG.dir_data, MASH_DECODER_CONFIG.name_dataset
         )
-        self.n_pts_train = MASH_DECODER_CONFIG.n_pts_train
-        self.n_pts_val = MASH_DECODER_CONFIG.n_pts_val
-        self.n_pts_test = MASH_DECODER_CONFIG.n_pts_test
         self.files = []
 
         if split == "train":
