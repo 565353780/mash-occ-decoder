@@ -18,6 +18,7 @@ CONFIG = MASH_DECODER_CONFIG
 DATASET = MashDataset
 NET = MashDecoder
 
+
 def cal_acc(x, gt):
     acc = ((x.sigmoid() > 0.5) == (gt["occ"] > 0.5)).float().sum(dim=-1) / x.shape[1]
     acc = acc.mean(-1)
@@ -161,16 +162,15 @@ class Trainer(object):
                 avg_acc,
             )
 
-            if False:
-                torch.save(
-                    {
-                        "model": self.model.state_dict(),
-                        "opt": opt.state_dict(),
-                        "n_epoch": n_epoch,
-                        "n_iter": n_iter,
-                    },
-                    f"{self.dir_ckpt}/{n_epoch}_{n_iter}.ckpt",
-                )
+            torch.save(
+                {
+                    "model": self.model.state_dict(),
+                    "opt": opt.state_dict(),
+                    "n_epoch": n_epoch,
+                    "n_iter": n_iter,
+                },
+                f"{self.dir_ckpt}/{n_epoch}_{n_iter}.ckpt",
+            )
 
             if n_epoch > 0 and n_epoch % CONFIG.freq_decay == 0:
                 for g in opt.param_groups:
