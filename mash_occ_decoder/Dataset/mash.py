@@ -86,13 +86,14 @@ class MashDataset(Dataset):
             positive_occ_num = positive_occ_idxs.shape[0]
 
         negative_occ_num = self.n_qry - positive_occ_num
+        negative_occ_num = min(negative_occ_num, positive_occ_num)
 
         positive_idxs = np.random.choice(positive_occ_idxs, positive_occ_num)
         negative_idxs = np.random.choice(negative_occ_idxs, negative_occ_num)
 
         idxs = np.hstack([positive_idxs, negative_idxs])
 
-        perm = idxs[np.random.permutation(self.n_qry)]
+        perm = idxs[np.random.permutation(positive_occ_num + negative_occ_num)]
 
         qry = qry[perm]
         occ = occ[perm]
