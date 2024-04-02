@@ -16,9 +16,11 @@ def demo():
     mesh_folder_path = dataset_root_folder_path + "00_meshes/"
 
     model_id = "02691156/2af04ef09d49221b85e5214b0d6a7"
+    model_id = "03001627/bed17aaa6ce899bed810b14a81e12eca"
 
-    model_file_path = "./output/v2/200_2010.ckpt"
-    device = "cuda:0"
+    model_file_path = "./output/v4-heads8-2class/model_best.pth"
+    model_file_path = "./output/20240402_23:39:35/model_best.pth"
+    device = "cpu"
 
     mash_params_file_path = mash_params_folder_path + model_id + "_obj.npy"
 
@@ -30,7 +32,7 @@ def demo():
 
     mesh.export("./output/test_mash_mesh.obj")
 
-    mash = Mash.fromParamsFile(mash_params_file_path, device="cuda:0")
+    mash = Mash.fromParamsFile(mash_params_file_path, device=device)
     mash_points = mash.toSamplePoints().detach().clone().cpu().numpy()
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(mash_points)

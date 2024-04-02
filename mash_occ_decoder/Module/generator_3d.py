@@ -39,12 +39,12 @@ class Generator3D(object):
     def __init__(
         self,
         model,
+        device: str = "cpu",
         points_batch_size=100000,
         refinement_step=0,
         with_normals=False,
         padding=0.1,
         sample=False,
-        device=MASH_DECODER_CONFIG.device,
         threshold=MASH_DECODER_CONFIG.mc_threshold,
         resolution0=MASH_DECODER_CONFIG.mc_res0,
         upsampling_steps=MASH_DECODER_CONFIG.mc_up_steps,
@@ -87,11 +87,11 @@ class Generator3D(object):
 
         params = np.hstack([mask_params, sh_params, rotate_vectors, positions])
 
-        q_ftrs = torch.from_numpy(params).unsqueeze(0).to(self.device).to(torch.float32)
+        q_ftrs = (
+            torch.from_numpy(params).type(qry_pts.dtype).to(qry_pts.device).unsqueeze(0)
+        )
 
         chunk_size = self.chunk_size
-        if self.device == "cpu":
-            chunk_size = int(chunk_size * 0.1)
         n_chunk = math.ceil(n_qry / chunk_size)
 
         ret = []
@@ -102,25 +102,13 @@ class Generator3D(object):
             print("\t start detect occ...")
             for_data = tqdm(for_data)
         for idx in for_data:
-            data_chunk = {}
-            for key in data:
-                if key == "ftrs":
-                    continue
-                if key == "qry":
-                    if idx < n_chunk - 1:
-                        data_chunk[key] = data[key][
-                            :, chunk_size * idx : chunk_size * (idx + 1), ...
-                        ]
-                        data_chunk["mash_params"] = q_ftrs[
-                            :, chunk_size * idx : chunk_size * (idx + 1), ...
-                        ]
-                    else:
-                        data_chunk[key] = data[key][:, chunk_size * idx : n_qry, ...]
-                        data_chunk["mash_params"] = q_ftrs[
-                            :, chunk_size * idx : n_qry, ...
-                        ]
-                else:
-                    data_chunk[key] = data[key]
+            data_chunk = {"mash_params": q_ftrs}
+            if idx < n_chunk - 1:
+                data_chunk["qry"] = data["qry"][
+                    :, chunk_size * idx : chunk_size * (idx + 1), ...
+                ]
+            else:
+                data_chunk["qry"] = data["qry"][:, chunk_size * idx : n_qry, ...]
 
             occ = self.model(data_chunk)
             ret.append(occ)

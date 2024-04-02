@@ -20,8 +20,14 @@ from mash_occ_decoder.Module.logger import Logger
 
 
 def cal_acc(occ, gt_occ):
-    acc = ((occ.sigmoid() > 0.5) == (gt_occ > 0.5)).float().sum(dim=-1) / occ.shape[1]
-    acc = acc.mean(-1)
+    positive_acc_num = torch.where((occ.sigmoid() > 0.5) & (gt_occ > 0.5))[0].shape[0]
+    negative_acc_num = torch.where((occ.sigmoid() < 0.5) & (gt_occ < 0.5))[0].shape[0]
+
+    occ_num = 1
+    for size in gt_occ.shape:
+        occ_num *= size
+
+    acc = (positive_acc_num + negative_acc_num) / occ_num
     return acc
 
 
@@ -161,7 +167,7 @@ class Trainer(object):
 
         loss_dict = {
             "loss": loss.item(),
-            "acc": acc.item(),
+            "acc": acc,
         }
 
         return loss_dict
@@ -188,7 +194,7 @@ class Trainer(object):
             acc = cal_acc(occ, gt_occ)
 
             avg_loss += loss.item()
-            avg_acc += acc.item()
+            avg_acc += acc
 
             gt_occ_shape = gt_occ.shape
             positive_occ_num = torch.where(gt_occ > 0.5)[0].shape[0]
@@ -244,8 +250,6 @@ class Trainer(object):
         while self.step < final_step:
             self.model.train()
 
-            print("[INFO][Trainer::train]")
-            print("\t start train mash occ itr", self.step + 1, "...")
             for data in self.train_loader:
                 train_loss_dict = self.trainStep(data, optimizer)
                 train_loss = train_loss_dict["loss"]
@@ -287,33 +291,36 @@ class Trainer(object):
                 if self.step >= final_step:
                     break
 
-            print("[INFO][Trainer::train]")
-            print("\t start eval on val dataset...")
-            self.model.eval()
-            eval_loss_dict = self.valStep()
-            eval_loss = eval_loss_dict["loss"]
-            eval_acc = eval_loss_dict["acc"]
-            eval_positive_occ_percent = eval_loss_dict["positive_occ_percent"]
+            if False:
+                print("[INFO][Trainer::train]")
+                print("\t start eval on val dataset...")
+                self.model.eval()
+                eval_loss_dict = self.valStep()
+                eval_loss = eval_loss_dict["loss"]
+                eval_acc = eval_loss_dict["acc"]
+                eval_positive_occ_percent = eval_loss_dict["positive_occ_percent"]
 
-            if self.logger.isValid():
-                self.logger.addScalar("Eval/Loss", eval_loss, self.step)
-                self.logger.addScalar("Eval/Accuracy", eval_acc, self.step)
-                self.logger.addScalar(
-                    "Eval/PositiveOCC",
+                if self.logger.isValid():
+                    self.logger.addScalar("Eval/Loss", eval_loss, self.step)
+                    self.logger.addScalar("Eval/Accuracy", eval_acc, self.step)
+                    self.logger.addScalar(
+                        "Eval/PositiveOCC",
+                        eval_positive_occ_percent,
+                        self.step,
+                    )
+
+                print(
+                    " loss:",
+                    eval_loss,
+                    " acc:",
+                    eval_acc,
+                    " positive occ:",
                     eval_positive_occ_percent,
-                    self.step,
                 )
 
-            print(
-                " loss:",
-                eval_loss,
-                " acc:",
-                eval_acc,
-                " positive occ:",
-                eval_positive_occ_percent,
-            )
+                self.autoSaveModel(eval_loss_dict)
 
-            self.autoSaveModel(eval_loss_dict)
+            self.autoSaveModel(train_loss_dict)
 
         return True
 

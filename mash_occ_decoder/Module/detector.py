@@ -17,7 +17,7 @@ class Detector(object):
 
         self.model = MashDecoder()
 
-        self.generator = Generator3D(self.model)
+        self.generator = Generator3D(self.model, device=self.device)
 
         if model_file_path is not None:
             self.loadModel(model_file_path)
@@ -30,7 +30,10 @@ class Detector(object):
             print("\t model_file_path:", model_file_path)
             return False
 
-        state_dict = torch.load(model_file_path)["model"]
+        if self.device == "cpu":
+            state_dict = torch.load(model_file_path, map_location="cpu")["model"]
+        else:
+            state_dict = torch.load(model_file_path)["model"]
 
         self.model.load_state_dict(state_dict)
         self.model.to(self.device)
