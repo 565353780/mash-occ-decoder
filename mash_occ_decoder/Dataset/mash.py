@@ -86,7 +86,6 @@ class MashDataset(Dataset):
             positive_occ_num = positive_occ_idxs.shape[0]
 
         negative_occ_num = self.n_qry - positive_occ_num
-        negative_occ_num = min(negative_occ_num, positive_occ_num)
 
         positive_idxs = np.random.choice(positive_occ_idxs, positive_occ_num)
         negative_idxs = np.random.choice(negative_occ_idxs, negative_occ_num)

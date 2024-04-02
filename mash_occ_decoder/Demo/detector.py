@@ -17,7 +17,7 @@ def demo():
 
     model_id = "02691156/2af04ef09d49221b85e5214b0d6a7"
 
-    model_file_path = "./output/v1/1900_144476.ckpt"
+    model_file_path = "./output/v2/200_2010.ckpt"
     device = "cuda:0"
 
     mash_params_file_path = mash_params_folder_path + model_id + "_obj.npy"

@@ -42,14 +42,14 @@ class Trainer(object):
             shuffle=True,
             batch_size=CONFIG.n_bs,
             num_workers=CONFIG.n_wk,
-            drop_last=True,
+            drop_last=False,
         )
         self.val_loader = DataLoader(
             DATASET("val"),
             shuffle=False,
             batch_size=CONFIG.n_bs,
             num_workers=CONFIG.n_wk,
-            drop_last=True,
+            drop_last=False,
         )
 
         self.model = NET().to(CONFIG.device)
@@ -89,6 +89,7 @@ class Trainer(object):
     def val_step(self):
         avg_loss_pred = 0
         avg_acc = 0
+        avg_positive_occ_percent = 0
         ni = 0
 
         print("[INFO][Trainer::val_step]")
@@ -107,11 +108,23 @@ class Trainer(object):
 
             avg_loss_pred = avg_loss_pred + loss_pred.item()
             avg_acc = avg_acc + acc.item()
+
+            occ = batch["occ"]
+            occ_shape = occ.shape
+            positive_occ_num = torch.where(occ > 0.5)[0].shape[0]
+            occ_num = 1
+            for size in occ_shape:
+                occ_num *= size
+
+            positive_occ_percent = 1.0 * positive_occ_num / occ_num
+            avg_positive_occ_percent += positive_occ_percent
+
             ni += 1
 
         avg_loss_pred /= ni
         avg_acc /= ni
-        return avg_loss_pred, avg_acc
+        avg_positive_occ_percent /= ni
+        return avg_loss_pred, avg_acc, avg_positive_occ_percent
 
     def train(self):
         os.makedirs(self.dir_ckpt, exist_ok=True)
@@ -141,16 +154,27 @@ class Trainer(object):
                 loss, acc = self.train_step(batch, opt)
                 lr = opt.state_dict()["param_groups"][0]["lr"]
 
-                self.writer.addScalar("Loss/train", loss, n_iter)
-                self.writer.addScalar("Acc/train", acc, n_iter)
-                self.writer.addScalar("Acc/lr", lr, n_iter)
+                self.writer.addScalar("Train/Loss", loss, n_iter)
+                self.writer.addScalar("Train/Accuracy", acc, n_iter)
+                self.writer.addScalar("Train/Lr", lr, n_iter)
+
+                occ = batch["occ"]
+                occ_shape = occ.shape
+                positive_occ_num = torch.where(occ > 0.5)[0].shape[0]
+                occ_num = 1
+                for size in occ_shape:
+                    occ_num *= size
+
+                positive_occ_percent = 1.0 * positive_occ_num / occ_num
+                self.writer.addScalar("Train/PositiveOCC", positive_occ_percent, n_iter)
 
                 n_iter += 1
 
             self.model.eval()
-            avg_loss_pred, avg_acc = self.val_step()
-            self.writer.addScalar("Loss/val", avg_loss_pred, n_iter)
-            self.writer.addScalar("Acc/val", avg_acc, n_iter)
+            avg_loss_pred, avg_acc, avg_positive_occ_percent = self.val_step()
+            self.writer.addScalar("Eval/Loss", avg_loss_pred, n_iter)
+            self.writer.addScalar("Eval/Accuracy", avg_acc, n_iter)
+            self.writer.addScalar("Eval/PositiveOCC", avg_positive_occ_percent, n_iter)
             print(
                 "[val] epcho:",
                 n_epoch,
@@ -160,6 +184,8 @@ class Trainer(object):
                 avg_loss_pred,
                 " acc:",
                 avg_acc,
+                " positive occ:",
+                avg_positive_occ_percent,
             )
 
             if n_epoch % 100 == 0:

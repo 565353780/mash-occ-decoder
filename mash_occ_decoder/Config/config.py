@@ -9,15 +9,15 @@ class MashDecoderConfig(object):
         self.categories_test = ["02691156", "03001627"]
         # MashDecoder hyper-parameters
         self.n_anc = 40
-        self.n_qry = 100000
+        self.n_qry = 1000
         # common hyper-parameters
         self.device = "cuda"
         self.mode = "train"
-        self.n_bs = 36
+        self.n_bs = 1000
         self.n_epochs = 10000
         self.lr = 1e-5
         self.freq_decay = 10
-        self.weight_decay = 0.999
+        self.weight_decay = 0.99
         # Marching Cube realted
         self.mc_chunk_size = 3000
         self.mc_res0 = 64
