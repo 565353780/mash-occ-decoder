@@ -14,10 +14,10 @@ class MashDecoderConfig(object):
         self.device = "cuda"
         self.mode = "train"
         self.n_bs = 36
-        self.n_epochs = 100
+        self.n_epochs = 10000
         self.lr = 1e-5
-        self.freq_decay = 1
-        self.weight_decay = 0.9
+        self.freq_decay = 10
+        self.weight_decay = 0.999
         # Marching Cube realted
         self.mc_chunk_size = 3000
         self.mc_res0 = 64
