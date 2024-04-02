@@ -14,7 +14,7 @@ class MashDecoder(nn.Module):
         dim=40,
         queries_dim=40,
         output_dim=1,
-        heads=8,
+        heads=40,
         dim_head=64,
         weight_tie_layers=False,
     ):

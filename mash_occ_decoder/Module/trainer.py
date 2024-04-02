@@ -1,6 +1,6 @@
 import os
 import torch
-import torch.nn.functional as F
+from torch import nn
 from tqdm import tqdm
 from typing import Union
 from torch.utils.data import DataLoader
@@ -29,11 +29,6 @@ def cal_acc(occ, gt_occ):
 
     acc = (positive_acc_num + negative_acc_num) / occ_num
     return acc
-
-
-def cal_loss(occ, gt_occ):
-    loss_pred = F.binary_cross_entropy_with_logits(occ, gt_occ)
-    return loss_pred
 
 
 class Trainer(object):
@@ -91,6 +86,8 @@ class Trainer(object):
         )
 
         self.model = MashDecoder().to(self.device)
+
+        self.loss_fn = nn.BCEWithLogitsLoss()
 
         self.initRecords()
 
@@ -157,7 +154,7 @@ class Trainer(object):
 
         occ = self.model(data)
 
-        loss = cal_loss(occ, data["occ"])
+        loss = self.loss_fn(occ, data["occ"])
 
         loss.backward()
         optimizer.step()
@@ -189,7 +186,7 @@ class Trainer(object):
 
             gt_occ = data["occ"]
 
-            loss = cal_loss(occ, gt_occ)
+            loss = self.loss_fn(occ, gt_occ)
 
             acc = cal_acc(occ, gt_occ)
 

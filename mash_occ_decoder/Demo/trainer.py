@@ -7,10 +7,10 @@ def demo():
     model_file_path = None
     dtype = torch.float64
     device = "cuda:0"
-    warm_epoch_step_num = 100
-    warm_epoch_num = 0
+    warm_epoch_step_num = 400
+    warm_epoch_num = 10
     finetune_step_num = 100000
-    lr = 1e-4
+    lr = 1e-5
     weight_decay = 1e-4
     factor = 0.9
     patience = 400
