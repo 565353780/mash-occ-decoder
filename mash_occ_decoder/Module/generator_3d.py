@@ -87,7 +87,7 @@ class Generator3D(object):
 
         params = np.hstack([mask_params, sh_params, rotate_vectors, positions])
 
-        q_ftrs = torch.from_numpy(params).unsqueeze(0).to(self.device).to(torch.float64)
+        q_ftrs = torch.from_numpy(params).unsqueeze(0).to(self.device).to(torch.float32)
 
         chunk_size = self.chunk_size
         if self.device == "cpu":
@@ -111,12 +111,14 @@ class Generator3D(object):
                         data_chunk[key] = data[key][
                             :, chunk_size * idx : chunk_size * (idx + 1), ...
                         ]
-                        data_chunk["ftrs"] = q_ftrs[
+                        data_chunk["mash_params"] = q_ftrs[
                             :, chunk_size * idx : chunk_size * (idx + 1), ...
                         ]
                     else:
                         data_chunk[key] = data[key][:, chunk_size * idx : n_qry, ...]
-                        data_chunk["ftrs"] = q_ftrs[:, chunk_size * idx : n_qry, ...]
+                        data_chunk["mash_params"] = q_ftrs[
+                            :, chunk_size * idx : n_qry, ...
+                        ]
                 else:
                     data_chunk[key] = data[key]
 

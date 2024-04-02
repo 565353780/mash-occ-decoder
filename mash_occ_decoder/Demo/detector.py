@@ -12,15 +12,17 @@ from mash_occ_decoder.Module.detector import Detector
 
 def demo():
     dataset_root_folder_path = "/home/chli/Dataset/aro_net/data/shapenet/"
-    mash_params_folder_path = dataset_root_folder_path + "mash/100anc/mash/"
+    mash_params_folder_path = dataset_root_folder_path + "mash/"
     mesh_folder_path = dataset_root_folder_path + "00_meshes/"
 
     model_id = "02691156/2af04ef09d49221b85e5214b0d6a7"
 
-    model_file_path = "./output/mash-uniform_sample/116_161811.ckpt"
+    model_file_path = "./output/v1/1900_144476.ckpt"
+    device = "cuda:0"
+
     mash_params_file_path = mash_params_folder_path + model_id + "_obj.npy"
 
-    detector = Detector(model_file_path)
+    detector = Detector(model_file_path, device)
 
     mesh = detector.detectFile(mash_params_file_path)
 
