@@ -1,4 +1,8 @@
+import torch
 from torch import nn
+
+from mamba_ssm import Mamba
+
 
 class MashDecoderV2(nn.Module):
     def __init__(
