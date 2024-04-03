@@ -10,11 +10,11 @@ from mash_occ_decoder.Method.cache import cache_fn
 class MashDecoder(nn.Module):
     def __init__(
         self,
-        depth=48,
+        depth=96,
         dim=40,
         queries_dim=40,
         output_dim=1,
-        heads=40,
+        heads=8,
         dim_head=64,
         weight_tie_layers=False,
     ):
