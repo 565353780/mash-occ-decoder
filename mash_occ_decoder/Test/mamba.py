@@ -1,5 +1,6 @@
 import torch
 from mamba_ssm import Mamba
+from tqdm import trange
 
 
 def test():
@@ -12,7 +13,9 @@ def test():
         d_conv=4,  # Local convolution width
         expand=2,  # Block expansion factor
     ).to("cuda")
-    y = model(x)
+    for _ in trange(1000):
+        for _ in range(64):
+            y = model(x)
     assert y.shape == x.shape
 
     print(y.shape)

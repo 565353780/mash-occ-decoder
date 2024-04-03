@@ -16,6 +16,7 @@ from mash_occ_decoder.Dataset.mash import MashDataset
 from mash_occ_decoder.Method.time import getCurrentTime
 from mash_occ_decoder.Method.path import createFileFolder
 from mash_occ_decoder.Model.mash_decoder import MashDecoder
+from mash_occ_decoder.Model.mash_decoder_v2 import MashDecoderV2
 from mash_occ_decoder.Module.logger import Logger
 
 
@@ -85,7 +86,7 @@ class Trainer(object):
             num_workers=MASH_DECODER_CONFIG.n_wk,
         )
 
-        self.model = MashDecoder().to(self.device)
+        self.model = MashDecoderV2().to(self.device)
 
         self.loss_fn = nn.BCEWithLogitsLoss()
 

@@ -4,6 +4,7 @@ import trimesh
 from typing import Union
 
 from mash_occ_decoder.Model.mash_decoder import MashDecoder
+from mash_occ_decoder.Model.mash_decoder_v2 import MashDecoderV2
 from mash_occ_decoder.Module.generator_3d import Generator3D
 
 
@@ -15,7 +16,7 @@ class Detector(object):
     ) -> None:
         self.device = device
 
-        self.model = MashDecoder()
+        self.model = MashDecoderV2()
 
         self.generator = Generator3D(self.model, device=self.device)
 
