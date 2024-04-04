@@ -241,6 +241,8 @@ class Trainer(object):
         train_step_num = self.toTrainStepNum(scheduler)
         final_step = self.step + train_step_num
 
+        eval_step = 0
+
         print("[INFO][Trainer::train]")
         print("\t start training ...")
         pbar = tqdm(total=final_step)
@@ -289,7 +291,8 @@ class Trainer(object):
                 if self.step >= final_step:
                     break
 
-            if False:
+            eval_step += 1
+            if eval_step % 100 == 0:
                 print("[INFO][Trainer::train]")
                 print("\t start eval on val dataset...")
                 self.model.eval()

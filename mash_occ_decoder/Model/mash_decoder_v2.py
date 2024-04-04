@@ -71,13 +71,13 @@ class MashDecoderV2(nn.Module):
     def __init__(
         self,
         d_model: int = 40,
-        n_layer: int = 48,
+        n_layer: int = 256,
         ssm_cfg=None,
         norm_epsilon: float = 1e-5,
-        rms_norm: bool = False,
+        rms_norm: bool = True,
         initializer_cfg=None,
-        fused_add_norm=False,
-        residual_in_fp32=False,
+        fused_add_norm=True,
+        residual_in_fp32=True,
         device="cuda:0",
         dtype=torch.float32,
     ) -> None:

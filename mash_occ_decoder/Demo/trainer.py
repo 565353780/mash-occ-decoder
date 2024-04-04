@@ -10,11 +10,11 @@ def demo():
     device = "cuda:0"
     warm_epoch_step_num = 100
     warm_epoch_num = 0
-    finetune_step_num = 100000
+    finetune_step_num = 100000000
     lr = 1e-4
     weight_decay = 1e-4
     factor = 0.98
-    patience = 400
+    patience = 1000
     min_lr = 1e-7
     save_result_folder_path = "auto"
     save_log_folder_path = "auto"
