@@ -67,7 +67,7 @@ def _init_weights(
                     p /= math.sqrt(n_residuals_per_layer * n_layer)
 
 
-class MashDecoderV2(nn.Module):
+class MashDecoder(nn.Module):
     def __init__(
         self,
         d_model: int = 40,
