@@ -11,8 +11,7 @@ from torch.optim.lr_scheduler import (
     ReduceLROnPlateau,
 )
 
-from mash_occ_decoder.Config.config import MASH_DECODER_CONFIG
-from mash_occ_decoder.Dataset.mash import MashDataset
+from mash_occ_decoder.Dataset.sdf import SDFDataset
 from mash_occ_decoder.Method.time import getCurrentTime
 from mash_occ_decoder.Method.path import createFileFolder
 from mash_occ_decoder.Model.mash_decoder import MashDecoder
@@ -34,6 +33,10 @@ def cal_acc(occ, gt_occ):
 class Trainer(object):
     def __init__(
         self,
+        dataset_root_folder_path: str,
+        batch_size: int = 400,
+        num_workers: int = 4,
+        n_qry: int = 200,
         model_file_path: Union[str, None] = None,
         dtype=torch.float64,
         device: str = "cpu",
@@ -73,16 +76,16 @@ class Trainer(object):
         self.logger = Logger()
 
         self.train_loader = DataLoader(
-            MashDataset("train"),
+            SDFDataset(dataset_root_folder_path, "train", n_qry),
             shuffle=True,
-            batch_size=MASH_DECODER_CONFIG.n_bs,
-            num_workers=MASH_DECODER_CONFIG.n_wk,
+            batch_size=batch_size,
+            num_workers=num_workers,
         )
         self.val_loader = DataLoader(
-            MashDataset("val"),
+            SDFDataset(dataset_root_folder_path, "val", n_qry),
             shuffle=False,
-            batch_size=MASH_DECODER_CONFIG.n_bs,
-            num_workers=MASH_DECODER_CONFIG.n_wk,
+            batch_size=batch_size,
+            num_workers=num_workers,
         )
 
         self.model = MashDecoder(dtype=self.dtype, device=self.device).to(self.device)
@@ -320,7 +323,7 @@ class Trainer(object):
 
                 self.autoSaveModel(eval_loss_dict)
 
-            self.autoSaveModel(train_loss_dict)
+            # self.autoSaveModel(train_loss_dict)
 
         return True
 

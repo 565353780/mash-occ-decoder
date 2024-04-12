@@ -2,26 +2,27 @@ import sys
 
 sys.path.append("../ma-sh")
 
+import os
 from mash_occ_decoder.Module.convertor import Convertor
 
 
 def demo():
-    class_id_list = [
-        "02691156",
-        "03001627",
-    ]
+    dataset_root_folder_path = "/home/chli/chLi/Dataset/SDF/ShapeNet/"
+    sdf_root_folder_path = dataset_root_folder_path + "sdf/"
+
+    class_id_list = os.listdir(sdf_root_folder_path)
 
     for class_id in class_id_list:
-        dataset_root_folder_path = (
-            "/home/chli/Dataset/aro_net/data/shapenet/mash/" + class_id + "/"
+        current_dataset_root_folder_path = sdf_root_folder_path + class_id + "/"
+        current_save_split_folder_path = (
+            dataset_root_folder_path + "split/" + class_id + "/"
         )
-        save_split_folder_path = (
-            "/home/chli/Dataset/aro_net/data/shapenet/04_splits/" + class_id + "/mash/"
-        )
-        train_scale = 0.8
-        val_scale = 0.1
+        train_scale = 0.98
+        val_scale = 0.01
 
-        convertor = Convertor(dataset_root_folder_path)
-        convertor.convertToSplitFiles(save_split_folder_path, train_scale, val_scale)
+        convertor = Convertor(current_dataset_root_folder_path)
+        convertor.convertToSplitFiles(
+            current_save_split_folder_path, train_scale, val_scale
+        )
 
     return True

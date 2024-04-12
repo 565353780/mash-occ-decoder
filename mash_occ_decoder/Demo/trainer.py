@@ -4,7 +4,11 @@ from mash_occ_decoder.Module.trainer import Trainer
 
 
 def demo():
-    model_file_path = "./output/v7-depth96/model_best.pth"
+    dataset_root_folder_path = "/home/chli/chLi/Dataset/"
+    batch_size = 400
+    num_workers = 32
+    n_qry = 200
+    model_file_path = "./output/v11-mamba-512layers-8heads-512crossdim/model_best.pth"
     model_file_path = None
     dtype = torch.float32
     device = "cuda:0"
@@ -20,6 +24,10 @@ def demo():
     save_log_folder_path = "auto"
 
     trainer = Trainer(
+        dataset_root_folder_path,
+        batch_size,
+        num_workers,
+        n_qry,
         model_file_path,
         dtype,
         device,
