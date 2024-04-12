@@ -2,6 +2,7 @@ import sys
 
 sys.path.append("../ma-sh")
 
+import torch
 import open3d as o3d
 from shutil import copyfile
 
@@ -19,12 +20,13 @@ def demo():
     model_id = "03001627/bed17aaa6ce899bed810b14a81e12eca"
 
     model_file_path = "./output/v4-heads8-2class/model_best.pth"
-    model_file_path = "./output/20240411_16:50:05/model_best.pth"
+    model_file_path = "./output/20240412_15:48:18/model_best.pth"
+    dtype = torch.float32
     device = "cuda:0"
 
     mash_params_file_path = mash_params_folder_path + model_id + "_obj.npy"
 
-    detector = Detector(model_file_path, device)
+    detector = Detector(model_file_path, dtype, device)
 
     mesh = detector.detectFile(mash_params_file_path)
 

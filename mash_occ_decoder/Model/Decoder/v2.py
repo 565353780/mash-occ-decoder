@@ -73,7 +73,7 @@ class MashDecoder(nn.Module):
         d_model: int = 40,
         n_layer: int = 512,
         n_cross: int = 8,
-        d_cross: int = 64,
+        d_cross: int = 512,
         ssm_cfg=None,
         norm_epsilon: float = 1e-5,
         rms_norm: bool = True,

@@ -9,7 +9,7 @@ class MashDecoderConfig(object):
         # MashDecoder hyper-parameters
         self.n_qry = 200
         # common hyper-parameters
-        self.n_bs = 500
+        self.n_bs = 400
         # Marching Cube realted
         self.mc_chunk_size = 3000
         self.mc_res0 = 64
