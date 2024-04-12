@@ -19,7 +19,7 @@ def demo():
     model_id = "03001627/bed17aaa6ce899bed810b14a81e12eca"
 
     model_file_path = "./output/v4-heads8-2class/model_best.pth"
-    model_file_path = "./output/20240404_09:29:01/model_last.pth"
+    model_file_path = "./output/20240411_16:50:05/model_best.pth"
     device = "cuda:0"
 
     mash_params_file_path = mash_params_folder_path + model_id + "_obj.npy"

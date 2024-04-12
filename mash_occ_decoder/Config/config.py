@@ -7,9 +7,9 @@ class MashDecoderConfig(object):
         self.categories_train = ["02691156", "03001627"]
         self.categories_test = ["02691156", "03001627"]
         # MashDecoder hyper-parameters
-        self.n_qry = 400
+        self.n_qry = 200
         # common hyper-parameters
-        self.n_bs = 800
+        self.n_bs = 500
         # Marching Cube realted
         self.mc_chunk_size = 3000
         self.mc_res0 = 64

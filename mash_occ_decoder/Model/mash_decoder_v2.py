@@ -71,7 +71,9 @@ class MashDecoderV2(nn.Module):
     def __init__(
         self,
         d_model: int = 40,
-        n_layer: int = 256,
+        n_layer: int = 512,
+        n_cross: int = 8,
+        d_cross: int = 64,
         ssm_cfg=None,
         norm_epsilon: float = 1e-5,
         rms_norm: bool = True,
@@ -122,7 +124,7 @@ class MashDecoderV2(nn.Module):
 
         self.decoder_cross_attn = PreNorm(
             d_model,
-            Attention(d_model, d_model, heads=1, dim_head=d_model),
+            Attention(d_model, d_model, heads=n_cross, dim_head=d_cross),
             context_dim=d_model,
         )
         self.decoder_ff = PreNorm(d_model, FeedForward(d_model))

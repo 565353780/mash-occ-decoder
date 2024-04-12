@@ -86,7 +86,7 @@ class Trainer(object):
             num_workers=MASH_DECODER_CONFIG.n_wk,
         )
 
-        self.model = MashDecoderV2().to(self.device)
+        self.model = MashDecoderV2(dtype=self.dtype, device=self.device).to(self.device)
 
         self.loss_fn = nn.BCEWithLogitsLoss()
 
