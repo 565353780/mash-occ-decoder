@@ -4,9 +4,9 @@ from mash_occ_decoder.Module.trainer import Trainer
 
 
 def demo():
-    dataset_root_folder_path = "/home/chli/chLi/Dataset/"
+    dataset_root_folder_path = "/home/chli/Dataset/"
     batch_size = 400
-    num_workers = 32
+    num_workers = 4
     n_qry = 200
     model_file_path = "./output/v11-mamba-512layers-8heads-512crossdim/model_best.pth"
     model_file_path = None

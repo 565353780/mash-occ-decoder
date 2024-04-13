@@ -3,41 +3,37 @@ import torch
 import numpy as np
 from torch.utils.data import Dataset
 
-from mash_occ_decoder.Config.config import MASH_DECODER_CONFIG
-
 
 class MashDataset(Dataset):
-    def __init__(self, split) -> None:
+    def __init__(
+        self,
+        dataset_root_folder_path: str,
+        split: str = "train",
+        n_qry: int = 200,
+    ) -> None:
+        self.dataset_root_folder_path = dataset_root_folder_path
         self.split = split
-        self.n_qry = MASH_DECODER_CONFIG.n_qry
-        self.dir_dataset = os.path.join(
-            MASH_DECODER_CONFIG.dir_data, MASH_DECODER_CONFIG.name_dataset
-        )
+        self.n_qry = n_qry
+
         self.files = []
 
-        if split == "train":
-            categories = MASH_DECODER_CONFIG.categories_train
-        else:
-            # FIXME: only finish single class split here
-            categories = MASH_DECODER_CONFIG.categories_train
+        categories = os.listdir(dataset_root_folder_path + "04_splits/")
 
         for category in categories:
-            if self.split == "train":
-                id_shapes = (
-                    open(f"{self.dir_dataset}/04_splits/{category}/mash/train.lst")
-                    .read()
-                    .split()
-                )
-            else:
-                id_shapes = (
-                    open(f"{self.dir_dataset}/04_splits/{category}/mash/test.lst")
-                    .read()
-                    .split()
-                )
+            split_file_path = (
+                self.dataset_root_folder_path
+                + "04_splits/"
+                + category
+                + "/mash/"
+                + self.split
+                + ".lst"
+            )
+            with open(split_file_path, "r") as f:
+                id_shapes = f.read().split()
 
             for shape_id in id_shapes:
-                qry_file_path = f"{self.dir_dataset}/02_qry_pts_occnet/{category}/{shape_id[:-4]}.npy"
-                occ_file_path = f"{self.dir_dataset}/03_qry_occs_occnet/{category}/{shape_id[:-4]}.npy"
+                qry_file_path = f"{self.dataset_root_folder_path}/02_qry_pts_occnet/{category}/{shape_id[:-4]}.npy"
+                occ_file_path = f"{self.dataset_root_folder_path}/03_qry_occs_occnet/{category}/{shape_id[:-4]}.npy"
 
                 if not os.path.exists(qry_file_path):
                     continue
@@ -54,13 +50,15 @@ class MashDataset(Dataset):
         category, full_shape_id = self.files[index]
         shape_id = full_shape_id[:-4]
 
-        qry = np.load(f"{self.dir_dataset}/02_qry_pts_occnet/{category}/{shape_id}.npy")
+        qry = np.load(
+            f"{self.dataset_root_folder_path}/02_qry_pts_occnet/{category}/{shape_id}.npy"
+        )
         occ = np.load(
-            f"{self.dir_dataset}/03_qry_occs_occnet/{category}/{shape_id}.npy"
+            f"{self.dataset_root_folder_path}/03_qry_occs_occnet/{category}/{shape_id}.npy"
         )
 
         mash_params_file_path = (
-            f"{self.dir_dataset}/mash/{category}/{full_shape_id}.npy"
+            f"{self.dataset_root_folder_path}/mash/{category}/{full_shape_id}.npy"
         )
 
         mash_params = np.load(mash_params_file_path, allow_pickle=True).item()

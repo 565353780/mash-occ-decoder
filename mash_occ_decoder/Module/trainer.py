@@ -16,6 +16,7 @@ from mash_occ_decoder.Method.time import getCurrentTime
 from mash_occ_decoder.Method.path import createFileFolder
 from mash_occ_decoder.Model.mash_decoder import MashDecoder
 from mash_occ_decoder.Module.logger import Logger
+from mash_occ_decoder.Module.data_prefetcher import DataPrefetcher
 
 
 def cal_acc(occ, gt_occ):
@@ -179,12 +180,13 @@ class Trainer(object):
         avg_positive_occ_percent = 0
         ni = 0
 
+        prefetcher = DataPrefetcher(self.val_loader, self.device)
+
         print("[INFO][Trainer::valStep]")
         print("\t start val loss and acc...")
-        for data in tqdm(self.val_loader):
-            for key in data:
-                data[key] = data[key].to(self.device)
+        data = prefetcher.next()
 
+        while data is not None:
             occ = self.model(data)
 
             gt_occ = data["occ"]
@@ -206,6 +208,8 @@ class Trainer(object):
             avg_positive_occ_percent += positive_occ_percent
 
             ni += 1
+
+            data = prefetcher.next()
 
         avg_loss /= ni
         avg_acc /= ni
@@ -252,7 +256,10 @@ class Trainer(object):
         while self.step < final_step:
             self.model.train()
 
-            for data in self.train_loader:
+            prefetcher = DataPrefetcher(self.train_loader, self.device)
+            data = prefetcher.next()
+
+            while data is not None:
                 train_loss_dict = self.trainStep(data, optimizer)
                 train_loss = train_loss_dict["loss"]
                 train_acc = train_loss_dict["acc"]
@@ -292,6 +299,8 @@ class Trainer(object):
 
                 if self.step >= final_step:
                     break
+
+                data = prefetcher.next()
 
             eval_step += 1
             if eval_step % 100 == 0:

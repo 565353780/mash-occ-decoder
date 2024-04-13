@@ -18,16 +18,18 @@ class SDFDataset(Dataset):
 
         self.mash_folder_path = self.dataset_root_folder_path + "Mash/"
         self.sdf_folder_path = self.dataset_root_folder_path + "SDF/"
+        self.split_folder_path = self.dataset_root_folder_path + "Split/"
 
         assert os.path.exists(self.mash_folder_path)
         assert os.path.exists(self.sdf_folder_path)
+        assert os.path.exists(self.split_folder_path)
 
         self.paths_list = []
 
-        dataset_name_list = os.listdir(self.sdf_folder_path)
+        dataset_name_list = os.listdir(self.split_folder_path + "sdf/")
 
         for dataset_name in dataset_name_list:
-            sdf_split_folder_path = self.sdf_folder_path + dataset_name + "/split/"
+            sdf_split_folder_path = self.split_folder_path + "sdf/" + dataset_name + "/"
 
             categories = os.listdir(sdf_split_folder_path)
 
@@ -62,8 +64,6 @@ class SDFDataset(Dataset):
                         + "/"
                         + rel_file_path
                     )
-                    if not os.path.exists(mash_file_path):
-                        continue
 
                     sdf_file_path = (
                         self.sdf_folder_path
@@ -73,12 +73,8 @@ class SDFDataset(Dataset):
                         + "/"
                         + rel_file_path
                     )
-                    if not os.path.exists(sdf_file_path):
-                        continue
 
                     self.paths_list.append([mash_file_path, sdf_file_path])
-                    if len(self.paths_list) > 100:
-                        return
         return
 
     def __len__(self):
