@@ -1,3 +1,4 @@
+import torch
 from torch import nn
 
 from mash_occ_decoder.Model.Layer.pre_norm import PreNorm
@@ -10,13 +11,15 @@ from mash_occ_decoder.Method.cache import cache_fn
 class MashDecoder(nn.Module):
     def __init__(
         self,
-        depth=96,
+        depth=24,
         dim=40,
         queries_dim=40,
-        output_dim=1,
+        output_dim=2,
         heads=8,
         dim_head=64,
         weight_tie_layers=False,
+        dtype=torch.float32,
+        device: str = "cpu",
     ):
         super().__init__()
 
@@ -52,7 +55,6 @@ class MashDecoder(nn.Module):
         self.decoder_ff = PreNorm(queries_dim, FeedForward(queries_dim))
 
         self.to_outputs = nn.Linear(queries_dim, output_dim)
-
         return
 
     def forward(self, data_dict):
@@ -67,5 +69,8 @@ class MashDecoder(nn.Module):
 
         latents = latents + self.decoder_ff(latents)
 
-        occ = self.to_outputs(latents).squeeze(-1)
-        return occ
+        output = self.to_outputs(latents)
+
+        occ = output[:, :, 0].squeeze(-1)
+        sdf = output[:, :, 1].squeeze(-1)
+        return occ, sdf

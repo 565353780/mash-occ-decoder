@@ -17,7 +17,7 @@ class Detector(object):
         self.dtype = dtype
         self.device = device
 
-        self.model = MashDecoder(dtype=self.dtype, device=self.device)
+        self.model = MashDecoder(dtype=self.dtype, device=self.device).to(self.device)
 
         self.generator = Generator3D(self.model, device=self.device)
 
@@ -35,7 +35,6 @@ class Detector(object):
         state_dict = torch.load(model_file_path, map_location="cpu")["model"]
 
         self.model.load_state_dict(state_dict)
-        self.model.to(self.device)
         self.model.eval()
         return True
 

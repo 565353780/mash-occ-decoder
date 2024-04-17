@@ -19,8 +19,7 @@ def demo():
     model_id = "02691156/2af04ef09d49221b85e5214b0d6a7"
     model_id = "03001627/bed17aaa6ce899bed810b14a81e12eca"
 
-    model_file_path = "./output/v4-heads8-2class/model_best.pth"
-    model_file_path = "./output/20240412_15:48:18/model_best.pth"
+    model_file_path = "./output/20240416_23:14:48/model_best.pth"
     dtype = torch.float32
     device = "cuda:0"
 

@@ -34,6 +34,8 @@ class SDFDataset(Dataset):
             categories = os.listdir(sdf_split_folder_path)
 
             for i, category in enumerate(categories):
+                if i >= 4:
+                    break
                 rel_file_path_list_file_path = (
                     sdf_split_folder_path + category + "/" + self.split + ".txt"
                 )
@@ -114,6 +116,9 @@ class SDFDataset(Dataset):
 
         negative_sdf_num = self.n_qry - positive_sdf_num
 
+        if negative_sdf_num > negative_sdf_idxs.shape[0]:
+            negative_sdf_num = negative_sdf_idxs.shape[0]
+
         positive_idxs = np.random.choice(positive_sdf_idxs, positive_sdf_num)
         negative_idxs = np.random.choice(negative_sdf_idxs, negative_sdf_num)
 
@@ -123,12 +128,15 @@ class SDFDataset(Dataset):
 
         qry = points[perm]
         occ = occ[perm]
+        sdf = sdf[perm]
+        # sdf = np.clip(sdf, -1.0, 1.0)
         mash_params = mash_params[np.random.permutation(mash_params.shape[0])]
 
         feed_dict = {
             "qry": torch.tensor(qry).float(),
             "mash_params": torch.tensor(mash_params).float(),
             "occ": torch.tensor(occ).float(),
+            "sdf": torch.tensor(sdf).float(),
         }
 
         return feed_dict
