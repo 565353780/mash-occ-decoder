@@ -13,7 +13,7 @@ from mash_occ_decoder.Module.detector import Detector
 
 
 def demo():
-    model_file_path = "./output/full-v2_3/model_last.pth"
+    model_file_path = "./output/20240418_17:30:30/model_last.pth"
     dtype = torch.float32
     device = "cuda:0"
 
@@ -22,11 +22,8 @@ def demo():
 
     detector = Detector(model_file_path, dtype, device)
 
-    for i in range(1):
+    for i in range(10):
         mash_params_file_path, sdf_file_path = sdf_dataset.paths_list[i]
-        mesh_file_path = sdf_file_path
-        print(mesh_file_path)
-        # exit()
         mesh = detector.detectFile(mash_params_file_path)
 
         print(mesh)
@@ -39,6 +36,10 @@ def demo():
         pcd.points = o3d.utility.Vector3dVector(mash_points)
         o3d.io.write_point_cloud("./output/test_mash_pcd" + str(i) + ".ply", pcd)
 
-    # gt_mesh_file_path = mesh_folder_path + model_id + ".obj"
-    # copyfile(gt_mesh_file_path, "./output/test_mash_mesh_gt.obj")
+        gt_mesh_file_path = sdf_file_path.replace(
+            sdf_dataset.sdf_folder_path + "ShapeNet/sdf/",
+            "/home/chli/chLi/Dataset/ShapeNet/Core/ShapeNetCore.v2/",
+        ).replace("_obj.npy", ".obj")
+
+        copyfile(gt_mesh_file_path, "./output/test_mash_mesh_gt" + str(i) + ".obj")
     return True
