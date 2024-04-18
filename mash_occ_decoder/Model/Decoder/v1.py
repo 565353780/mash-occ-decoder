@@ -11,9 +11,9 @@ from mash_occ_decoder.Method.cache import cache_fn
 class MashDecoder(nn.Module):
     def __init__(
         self,
-        depth=24,
+        depth=96,
         dim=40,
-        queries_dim=40,
+        queries_dim=512,
         output_dim=2,
         heads=8,
         dim_head=64,
@@ -25,7 +25,7 @@ class MashDecoder(nn.Module):
 
         self.depth = depth
 
-        self.point_embed = PointEmbed(dim=dim)
+        self.point_embed = PointEmbed(dim=queries_dim)
 
         def get_latent_attn():
             return PreNorm(
@@ -60,6 +60,7 @@ class MashDecoder(nn.Module):
     def forward(self, data_dict):
         x = data_dict["mash_params"]
         queries = data_dict["qry"]
+
         for self_attn, self_ff in self.layers:
             x = self_attn(x) + x
             x = self_ff(x) + x

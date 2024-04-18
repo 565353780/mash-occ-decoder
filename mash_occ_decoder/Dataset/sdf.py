@@ -32,10 +32,11 @@ class SDFDataset(Dataset):
             sdf_split_folder_path = self.split_folder_path + "sdf/" + dataset_name + "/"
 
             categories = os.listdir(sdf_split_folder_path)
+            # FIXME: for detect test only
+            if self.split == "test":
+                categories = ["03001627"]
 
             for i, category in enumerate(categories):
-                if i >= 4:
-                    break
                 rel_file_path_list_file_path = (
                     sdf_split_folder_path + category + "/" + self.split + ".txt"
                 )

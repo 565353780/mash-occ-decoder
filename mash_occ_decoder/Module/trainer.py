@@ -12,6 +12,7 @@ from torch.optim.lr_scheduler import (
 )
 
 from mash_occ_decoder.Dataset.sdf import SDFDataset
+from mash_occ_decoder.Loss.focal import FocalLoss
 from mash_occ_decoder.Method.time import getCurrentTime
 from mash_occ_decoder.Method.path import createFileFolder
 from mash_occ_decoder.Model.mash_decoder import MashDecoder
@@ -104,11 +105,11 @@ class Trainer(object):
 
         self.model = MashDecoder(dtype=self.dtype, device=self.device).to(self.device)
 
-        self.occ_loss_fn = nn.BCEWithLogitsLoss()
+        self.occ_loss_fn = FocalLoss(0.25, 2, "mean")
         self.sdf_loss_fn = nn.SmoothL1Loss()
 
         self.occ_loss_weight = 1.0
-        self.sdf_loss_weight = 100.0
+        self.sdf_loss_weight = 1.0
 
         self.initRecords()
 
