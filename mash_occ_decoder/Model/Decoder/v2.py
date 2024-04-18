@@ -73,7 +73,7 @@ class MashDecoder(nn.Module):
         d_model: int = 40,
         n_layer: int = 512,
         n_cross: int = 8,
-        d_cross: int = 512,
+        d_cross: int = 40,
         ssm_cfg=None,
         norm_epsilon: float = 1e-5,
         rms_norm: bool = True,
@@ -87,7 +87,7 @@ class MashDecoder(nn.Module):
         super().__init__()
         self.residual_in_fp32 = residual_in_fp32
 
-        self.point_embed = PointEmbed(dim=d_model)
+        self.point_embed = PointEmbed(dim=d_cross)
 
         self.fused_add_norm = fused_add_norm
         if self.fused_add_norm:
@@ -123,14 +123,13 @@ class MashDecoder(nn.Module):
         )
 
         self.decoder_cross_attn = PreNorm(
-            d_model,
-            Attention(d_model, d_model, heads=n_cross, dim_head=d_cross),
+            d_cross,
+            Attention(d_cross, d_model, heads=n_cross, dim_head=512),
             context_dim=d_model,
         )
-        self.decoder_ff = PreNorm(d_model, FeedForward(d_model))
+        self.decoder_ff = PreNorm(d_cross, FeedForward(d_cross))
 
-        self.to_outputs = nn.Linear(d_model, 1)
-
+        self.to_outputs = nn.Linear(d_cross, 1)
         return
 
     def forward(self, data_dict):

@@ -105,11 +105,7 @@ class Trainer(object):
 
         self.model = MashDecoder(dtype=self.dtype, device=self.device).to(self.device)
 
-        self.occ_loss_fn = FocalLoss(0.25, 2, "mean")
-        self.sdf_loss_fn = nn.SmoothL1Loss()
-
-        self.occ_loss_weight = 1.0
-        self.sdf_loss_weight = 1.0
+        self.loss_fn = nn.BCEWithLogitsLoss()
 
         self.initRecords()
 
@@ -176,37 +172,27 @@ class Trainer(object):
 
         gt_occ = data["occ"]
 
-        occ, sdf = self.model(data)
+        occ = self.model(data)
 
-        occ_loss = self.occ_loss_fn(occ, gt_occ) * self.occ_loss_weight
-        sdf_loss = self.sdf_loss_fn(sdf, data["sdf"]) * self.sdf_loss_weight
-
-        loss = occ_loss + sdf_loss
+        loss = self.loss_fn(occ, gt_occ)
 
         loss.backward()
         optimizer.step()
 
         with torch.no_grad():
-            occ_acc = cal_occ_acc(occ, gt_occ)
-            sdf_acc = cal_sdf_acc(sdf, gt_occ)
+            acc = cal_occ_acc(occ, gt_occ)
 
         loss_dict = {
-            "OCCLoss": occ_loss.item(),
-            "SDFLoss": sdf_loss.item(),
             "Loss": loss.item(),
-            "OCCAccuracy": occ_acc,
-            "SDFAccuracy": sdf_acc,
+            "Accuracy": acc,
         }
 
         return loss_dict
 
     @torch.no_grad()
     def valStep(self) -> dict:
-        avg_occ_loss = 0
-        avg_sdf_loss = 0
         avg_loss = 0
-        avg_occ_acc = 0
-        avg_sdf_acc = 0
+        avg_acc = 0
         avg_positive_occ_percent = 0
         ni = 0
 
@@ -216,24 +202,16 @@ class Trainer(object):
             for key in data.keys():
                 data[key] = data[key].to(self.device)
 
-            occ, sdf = self.model(data)
+            occ = self.model(data)
 
             gt_occ = data["occ"]
-            gt_sdf = data["sdf"]
 
-            occ_loss = self.occ_loss_fn(occ, gt_occ) * self.occ_loss_weight
-            sdf_loss = self.sdf_loss_fn(sdf, gt_sdf) * self.sdf_loss_weight
+            loss = self.loss_fn(occ, gt_occ)
 
-            loss = occ_loss + sdf_loss
+            acc = cal_occ_acc(occ, gt_occ)
 
-            occ_acc = cal_occ_acc(occ, gt_occ)
-            sdf_acc = cal_sdf_acc(sdf, gt_occ)
-
-            avg_occ_loss += occ_loss.item()
-            avg_sdf_loss += sdf_loss.item()
             avg_loss += loss.item()
-            avg_occ_acc += occ_acc
-            avg_sdf_acc += sdf_acc
+            avg_acc += acc
 
             gt_occ_shape = gt_occ.shape
             positive_occ_num = torch.where(gt_occ > 0.5)[0].shape[0]
@@ -246,19 +224,13 @@ class Trainer(object):
 
             ni += 1
 
-        avg_occ_loss /= ni
-        avg_sdf_loss /= ni
         avg_loss /= ni
-        avg_occ_acc /= ni
-        avg_sdf_acc /= ni
+        avg_acc /= ni
         avg_positive_occ_percent /= ni
 
         loss_dict = {
-            "OCCLoss": avg_occ_loss,
-            "SDFLoss": avg_sdf_loss,
             "Loss": avg_loss,
-            "OCCAccuracy": avg_occ_acc,
-            "SDFAccuracy": avg_sdf_acc,
+            "Accuracy": avg_acc,
             "PositiveOCC": avg_positive_occ_percent,
         }
 
@@ -351,14 +323,14 @@ class Trainer(object):
                     " loss:",
                     eval_loss_dict["Loss"],
                     " acc:",
-                    eval_loss_dict["OCCAccuracy"],
+                    eval_loss_dict["Accuracy"],
                     " positive occ:",
                     eval_loss_dict["PositiveOCC"],
                 )
 
-                self.autoSaveModel(eval_loss_dict["OCCAccuracy"], False)
+                self.autoSaveModel(eval_loss_dict["Accuracy"], False)
 
-            # self.autoSaveModel(train_loss_dict['OCCAccuracy'], False)
+            # self.autoSaveModel(train_loss_dict['Accuracy'], False)
 
         return True
 

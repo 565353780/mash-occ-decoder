@@ -110,7 +110,7 @@ class Generator3D(object):
             else:
                 data_chunk["qry"] = data["qry"][:, chunk_size * idx : n_qry, ...]
 
-            occ, _ = self.model(data_chunk)
+            occ = self.model(data_chunk)
             ret.append(occ)
 
         ret = torch.cat(ret, -1)

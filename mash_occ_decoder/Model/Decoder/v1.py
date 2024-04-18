@@ -11,10 +11,10 @@ from mash_occ_decoder.Method.cache import cache_fn
 class MashDecoder(nn.Module):
     def __init__(
         self,
-        depth=96,
+        depth=24,
         dim=40,
         queries_dim=512,
-        output_dim=2,
+        output_dim=1,
         heads=8,
         dim_head=64,
         weight_tie_layers=False,
@@ -49,7 +49,7 @@ class MashDecoder(nn.Module):
 
         self.decoder_cross_attn = PreNorm(
             queries_dim,
-            Attention(queries_dim, dim, heads=1, dim_head=dim),
+            Attention(queries_dim, dim, heads=1, dim_head=queries_dim),
             context_dim=dim,
         )
         self.decoder_ff = PreNorm(queries_dim, FeedForward(queries_dim))
@@ -70,8 +70,5 @@ class MashDecoder(nn.Module):
 
         latents = latents + self.decoder_ff(latents)
 
-        output = self.to_outputs(latents)
-
-        occ = output[:, :, 0].squeeze(-1)
-        sdf = output[:, :, 1].squeeze(-1)
-        return occ, sdf
+        occ = self.to_outputs(latents).squeeze(-1)
+        return occ

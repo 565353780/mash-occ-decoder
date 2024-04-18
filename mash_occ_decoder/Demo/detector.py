@@ -13,7 +13,7 @@ from mash_occ_decoder.Module.detector import Detector
 
 
 def demo():
-    model_file_path = "./output/occ-sdf-v2_2/model_best.pth"
+    model_file_path = "./output/full-v2_3/model_last.pth"
     dtype = torch.float32
     device = "cuda:0"
 
@@ -22,7 +22,7 @@ def demo():
 
     detector = Detector(model_file_path, dtype, device)
 
-    for i in range(10):
+    for i in range(1):
         mash_params_file_path, sdf_file_path = sdf_dataset.paths_list[i]
         mesh_file_path = sdf_file_path
         print(mesh_file_path)

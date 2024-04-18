@@ -129,15 +129,12 @@ class SDFDataset(Dataset):
 
         qry = points[perm]
         occ = occ[perm]
-        sdf = sdf[perm]
-        # sdf = np.clip(sdf, -1.0, 1.0)
         mash_params = mash_params[np.random.permutation(mash_params.shape[0])]
 
         feed_dict = {
             "qry": torch.tensor(qry).float(),
             "mash_params": torch.tensor(mash_params).float(),
             "occ": torch.tensor(occ).float(),
-            "sdf": torch.tensor(sdf).float(),
         }
 
         return feed_dict

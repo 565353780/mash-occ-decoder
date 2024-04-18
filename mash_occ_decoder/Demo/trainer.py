@@ -8,7 +8,7 @@ def demo():
     batch_size = 72
     num_workers = 4
     n_qry = 4000
-    model_file_path = "./output/occ-sdf-v2_2/model_last.pth"
+    model_file_path = "./output/full-v2_3/model_last.pth"
     # model_file_path = None
     dtype = torch.float32
     device = "cuda:0"
@@ -19,7 +19,7 @@ def demo():
     weight_decay = 1e-4
     factor = 0.99
     patience = 10000
-    min_lr = 1e-7
+    min_lr = 1e-6
     save_result_folder_path = "auto"
     save_log_folder_path = "auto"
 
