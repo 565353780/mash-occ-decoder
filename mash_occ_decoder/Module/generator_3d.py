@@ -80,12 +80,12 @@ class Generator3D(object):
 
         mash_params = np.load(mash_params_file_path, allow_pickle=True).item()
 
-        mask_params = mash_params["mask_params"]
-        sh_params = mash_params["sh_params"]
         rotate_vectors = mash_params["rotate_vectors"]
         positions = mash_params["positions"]
+        mask_params = mash_params["mask_params"]
+        sh_params = mash_params["sh_params"]
 
-        params = np.hstack([mask_params, sh_params, rotate_vectors, positions])
+        params = np.hstack([rotate_vectors, positions, mask_params, sh_params])
 
         q_ftrs = (
             torch.from_numpy(params).type(qry_pts.dtype).to(qry_pts.device).unsqueeze(0)
@@ -97,7 +97,7 @@ class Generator3D(object):
         ret = []
 
         for_data = range(n_chunk)
-        if self.device == "cpu":
+        if self.device == "cpu" or True:
             print("[INFO][Generator3D::eval_points]")
             print("\t start detect occ...")
             for_data = tqdm(for_data)

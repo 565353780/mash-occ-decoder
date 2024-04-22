@@ -12,8 +12,8 @@ class MashDecoder(nn.Module):
     def __init__(
         self,
         depth=24,
-        dim=31,
-        queries_dim=400,
+        anchor_dim=31,
+        hidden_dim=400,
         output_dim=1,
         heads=8,
         dim_head=64,
@@ -25,15 +25,19 @@ class MashDecoder(nn.Module):
 
         self.depth = depth
 
-        self.point_embed = PointEmbed(dim=queries_dim)
+        self.anchor_embed = PointEmbed(6, 48, hidden_dim - anchor_dim + 6)
+        self.point_embed = PointEmbed(3, 48, hidden_dim)
 
         def get_latent_attn():
             return PreNorm(
-                dim, Attention(dim, heads=heads, dim_head=dim_head, drop_path_rate=0.1)
+                hidden_dim,
+                Attention(
+                    hidden_dim, heads=heads, dim_head=dim_head, drop_path_rate=0.1
+                ),
             )
 
         def get_latent_ff():
-            return PreNorm(dim, FeedForward(dim, drop_path_rate=0.1))
+            return PreNorm(hidden_dim, FeedForward(hidden_dim, drop_path_rate=0.1))
 
         get_latent_attn, get_latent_ff = map(cache_fn, (get_latent_attn, get_latent_ff))
 
@@ -48,18 +52,22 @@ class MashDecoder(nn.Module):
             )
 
         self.decoder_cross_attn = PreNorm(
-            queries_dim,
-            Attention(queries_dim, dim, heads=1, dim_head=queries_dim),
-            context_dim=dim,
+            hidden_dim,
+            Attention(hidden_dim, hidden_dim, heads=1, dim_head=hidden_dim),
+            context_dim=hidden_dim,
         )
-        self.decoder_ff = PreNorm(queries_dim, FeedForward(queries_dim))
+        self.decoder_ff = PreNorm(hidden_dim, FeedForward(hidden_dim))
 
-        self.to_outputs = nn.Linear(queries_dim, output_dim)
+        self.to_outputs = nn.Linear(hidden_dim, output_dim)
         return
 
     def forward(self, data_dict):
-        x = data_dict["mash_params"]
+        mash_params = data_dict["mash_params"]
         queries = data_dict["qry"]
+
+        anchor_embeddings = self.anchor_embed(mash_params[:, :, :6])
+
+        x = torch.cat([anchor_embeddings, mash_params[:, :, 6:]], dim=2)
 
         for self_attn, self_ff in self.layers:
             x = self_attn(x) + x

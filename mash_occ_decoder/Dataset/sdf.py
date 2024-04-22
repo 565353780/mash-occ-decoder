@@ -34,6 +34,7 @@ class SDFDataset(Dataset):
             categories = os.listdir(sdf_split_folder_path)
             # FIXME: for detect test only
             if self.split == "test":
+                # categories = ["02691156"]
                 categories = ["03001627"]
 
             for i, category in enumerate(categories):
@@ -89,12 +90,12 @@ class SDFDataset(Dataset):
         mash_params = np.load(mash_file_path, allow_pickle=True).item()
         sdf_data = np.load(sdf_file_path)
 
-        mask_params = mash_params["mask_params"]
-        sh_params = mash_params["sh_params"]
         rotate_vectors = mash_params["rotate_vectors"]
         positions = mash_params["positions"]
+        mask_params = mash_params["mask_params"]
+        sh_params = mash_params["sh_params"]
 
-        mash_params = np.hstack([mask_params, sh_params, rotate_vectors, positions])
+        mash_params = np.hstack([rotate_vectors, positions, mask_params, sh_params])
 
         if self.split == "train":
             np.random.seed()

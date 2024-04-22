@@ -70,10 +70,10 @@ def _init_weights(
 class MashDecoder(nn.Module):
     def __init__(
         self,
-        d_model: int = 40,
-        n_layer: int = 512,
-        n_cross: int = 8,
-        d_cross: int = 40,
+        d_model: int = 31,
+        n_layer: int = 400,
+        n_cross: int = 1,
+        d_cross: int = 400,
         ssm_cfg=None,
         norm_epsilon: float = 1e-5,
         rms_norm: bool = True,
@@ -124,7 +124,7 @@ class MashDecoder(nn.Module):
 
         self.decoder_cross_attn = PreNorm(
             d_cross,
-            Attention(d_cross, d_model, heads=n_cross, dim_head=512),
+            Attention(d_cross, d_model, heads=n_cross, dim_head=d_cross),
             context_dim=d_model,
         )
         self.decoder_ff = PreNorm(d_cross, FeedForward(d_cross))
@@ -135,6 +135,7 @@ class MashDecoder(nn.Module):
     def forward(self, data_dict):
         x = data_dict["mash_params"]
         queries = data_dict["qry"]
+
         for layer in self.layers:
             x, residual = layer(x)
             x = x + residual

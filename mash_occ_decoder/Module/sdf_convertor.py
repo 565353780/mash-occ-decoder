@@ -132,7 +132,7 @@ class SDFConvertor(object):
         train_scale: float = 0.8,
         val_scale: float = 0.1,
     ) -> bool:
-        categories = os.listdir(self.sdf_folder_path + dataset_name + "/sdf/")
+        categories = os.listdir(self.mash_folder_path + dataset_name + "/mash/")
 
         for i, category in enumerate(categories):
             print("[INFO][SDFConvertor::convertToDatasetSplitFiles]")
@@ -159,7 +159,7 @@ class SDFConvertor(object):
         train_scale: float = 0.8,
         val_scale: float = 0.1,
     ) -> bool:
-        dataset_name_list = os.listdir(self.sdf_folder_path)
+        dataset_name_list = os.listdir(self.mash_folder_path)
 
         for dataset_name in dataset_name_list:
             self.convertToDatasetSplitFiles(dataset_name, train_scale, val_scale)

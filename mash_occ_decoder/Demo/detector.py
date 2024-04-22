@@ -13,16 +13,16 @@ from mash_occ_decoder.Module.detector import Detector
 
 
 def demo():
-    model_file_path = "./output/20240418_17:30:30/model_last.pth"
+    model_file_path = "./output/20240422_17:43:08/model_last.pth"
     dtype = torch.float32
     device = "cuda:0"
 
     dataset_root_folder_path = "/home/chli/Dataset/"
-    sdf_dataset = SDFDataset(dataset_root_folder_path, "test")
+    sdf_dataset = SDFDataset(dataset_root_folder_path, "val")
 
     detector = Detector(model_file_path, dtype, device)
 
-    for i in range(10):
+    for i in range(1):
         mash_params_file_path, sdf_file_path = sdf_dataset.paths_list[i]
         mesh = detector.detectFile(mash_params_file_path)
 
