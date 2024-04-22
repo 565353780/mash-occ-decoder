@@ -30,22 +30,17 @@ def demo():
             "/home/chli/chLi/Dataset/ShapeNet/Core/ShapeNetCore.v2/",
         ).replace("_obj.npy", ".obj")
 
-        if False:
+        if True:
             mesh = detector.detectFile(mash_params_file_path)
             print(mesh)
             mesh.export("./output/test_mash_mesh" + str(i) + ".obj")
 
-        if True:
+        if False:
             mash = Mash.fromParamsFile(mash_params_file_path, device=device)
             mash_points = mash.toSamplePoints().detach().clone().cpu().numpy()
             pcd = o3d.geometry.PointCloud()
             pcd.points = o3d.utility.Vector3dVector(mash_points)
-            # o3d.io.write_point_cloud("./output/test_mash_pcd" + str(i) + ".ply", pcd)
-
-            test_mesh = o3d.io.read_triangle_mesh(gt_mesh_file_path)
-
-            o3d.visualization.draw_geometries([pcd, test_mesh])
-            exit()
+            o3d.io.write_point_cloud("./output/test_mash_pcd" + str(i) + ".ply", pcd)
 
         if False:
             test_mesh = o3d.io.read_triangle_mesh(gt_mesh_file_path)
