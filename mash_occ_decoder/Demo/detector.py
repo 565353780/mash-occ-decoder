@@ -14,7 +14,7 @@ from mash_occ_decoder.Module.detector import Detector
 
 
 def demo():
-    model_file_path = "./output/20240422_17:43:08/model_best.pth"
+    model_file_path = "./output/20240422_21:29:54/model_last.pth"
     dtype = torch.float32
     device = "cuda:0"
 
@@ -35,18 +35,21 @@ def demo():
             print(mesh)
             mesh.export("./output/test_mash_mesh" + str(i) + ".obj")
 
-        if False:
+        if True:
             mash = Mash.fromParamsFile(mash_params_file_path, device=device)
             mash_points = mash.toSamplePoints().detach().clone().cpu().numpy()
             pcd = o3d.geometry.PointCloud()
             pcd.points = o3d.utility.Vector3dVector(mash_points)
-            o3d.io.write_point_cloud("./output/test_mash_pcd" + str(i) + ".ply", pcd)
+            o3d.io.write_point_cloud(
+                "./output/test_mash_pcd" + str(i) + ".ply", pcd, write_ascii=True
+            )
 
-        if False:
+        if True:
             test_mesh = o3d.io.read_triangle_mesh(gt_mesh_file_path)
             pts = np.asarray(test_mesh.vertices)
             print(np.min(pts, axis=0))
             print(np.max(pts, axis=0))
 
-        copyfile(gt_mesh_file_path, "./output/test_mash_mesh_gt" + str(i) + ".obj")
+        if True:
+            copyfile(gt_mesh_file_path, "./output/test_mash_mesh_gt" + str(i) + ".obj")
     return True
