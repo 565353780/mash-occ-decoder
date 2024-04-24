@@ -11,12 +11,11 @@ class SDFDataset(Dataset):
         dataset_root_folder_path: str,
         split: str = "train",
         n_qry: int = 200,
+        noise_label: str = "0_25",
     ) -> None:
         self.dataset_root_folder_path = dataset_root_folder_path
         self.split = split
         self.n_qry = n_qry
-
-        noise_label = "0_025"
 
         self.mash_folder_path = self.dataset_root_folder_path + "MashV2/"
         self.sdf_folder_path = (
@@ -93,6 +92,11 @@ class SDFDataset(Dataset):
         return len(self.paths_list)
 
     def __getitem__(self, index):
+        if self.split == "train":
+            np.random.seed()
+        else:
+            np.random.seed(1234)
+
         mash_file_path, sdf_file_path = self.paths_list[index]
 
         mash_params = np.load(mash_file_path, allow_pickle=True).item()
@@ -103,12 +107,24 @@ class SDFDataset(Dataset):
         mask_params = mash_params["mask_params"]
         sh_params = mash_params["sh_params"]
 
-        mash_params = np.hstack([rotate_vectors, positions, mask_params, sh_params])
+        scale_range = [0.5, 2.0]
+        move_range = [-0.6, 0.6]
 
-        if self.split == "train":
-            np.random.seed()
-        else:
-            np.random.seed(1234)
+        random_scale = (
+            scale_range[0] + (scale_range[1] - scale_range[0]) * np.random.rand()
+        )
+        random_translate = move_range[0] + (
+            move_range[1] - move_range[0]
+        ) * np.random.rand(3)
+
+        mash_params = np.hstack(
+            [
+                rotate_vectors,
+                positions * random_scale + random_translate,
+                mask_params,
+                sh_params * random_scale,
+            ]
+        )
 
         points = sdf_data[:, :3]
         sdf = sdf_data[:, 3]
@@ -136,7 +152,7 @@ class SDFDataset(Dataset):
 
         perm = idxs[np.random.permutation(positive_sdf_num + negative_sdf_num)]
 
-        qry = points[perm]
+        qry = points[perm] * random_scale + random_translate
         occ = occ[perm]
         mash_params = mash_params[np.random.permutation(mash_params.shape[0])]
 

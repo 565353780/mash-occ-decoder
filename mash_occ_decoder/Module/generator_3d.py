@@ -43,7 +43,7 @@ class Generator3D(object):
         points_batch_size=100000,
         refinement_step=0,
         with_normals=False,
-        padding=0.5,
+        padding=0.1,
         sample=False,
         threshold=MASH_DECODER_CONFIG.mc_threshold,
         resolution0=MASH_DECODER_CONFIG.mc_res0,

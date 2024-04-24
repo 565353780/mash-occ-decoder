@@ -5,10 +5,8 @@ from typing import Tuple
 
 
 class SDFConvertor(object):
-    def __init__(self, dataset_root_folder_path: str) -> None:
+    def __init__(self, dataset_root_folder_path: str, noise_label: str) -> None:
         self.dataset_root_folder_path = dataset_root_folder_path
-
-        noise_label = "0_025"
 
         self.mash_folder_path = self.dataset_root_folder_path + "MashV2/"
         self.sdf_folder_path = (

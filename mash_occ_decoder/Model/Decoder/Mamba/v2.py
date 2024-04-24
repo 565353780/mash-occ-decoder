@@ -20,7 +20,7 @@ class MashDecoder(nn.Module):
         mask_degree: int = 4,
         sh_degree: int = 3,
         d_hidden: int = 400,
-        d_hidden_embed: int = 48,
+        d_hidden_embed: int = 100,
         n_layer: int = 24,
         n_cross: int = 4,
         ssm_cfg=None,
@@ -39,9 +39,12 @@ class MashDecoder(nn.Module):
         self.mask_dim = 2 * mask_degree + 1
         self.sh_dim = (sh_degree + 1) ** 2
 
-        self.anchor_embed = PointEmbed(
-            6, d_hidden_embed, d_hidden - self.mask_dim - self.sh_dim
-        )
+        assert d_hidden % 4 == 0
+
+        self.rotation_embed = PointEmbed(3, d_hidden_embed, d_hidden // 4)
+        self.position_embed = PointEmbed(3, d_hidden_embed, d_hidden // 4)
+        self.mask_embed = PointEmbed(self.mask_dim, d_hidden_embed, d_hidden // 4)
+        self.sh_embed = PointEmbed(self.sh_dim, d_hidden_embed, d_hidden // 4)
         self.point_embed = PointEmbed(3, d_hidden_embed, d_hidden)
 
         self.fused_add_norm = fused_add_norm
@@ -88,10 +91,13 @@ class MashDecoder(nn.Module):
         return
 
     def embedMash(self, mash_params: torch.Tensor) -> torch.Tensor:
-        anchor_embeddings = self.anchor_embed(mash_params[:, :, :6])
+        rotation_embeddings = self.rotation_embed(mash_params[:, :, :3])
+        position_embeddings = self.position_embed(mash_params[:, :, 3:6])
+        mask_embeddings = self.mask_embed(mash_params[:, :, 6 : 6 + self.mask_dim])
+        sh_embeddings = self.sh_embed(mash_params[:, :, 6 + self.mask_dim :])
 
         mash_embeddings = torch.cat(
-            [anchor_embeddings, mash_params[:, :, 6:]],
+            [rotation_embeddings, position_embeddings, mask_embeddings, sh_embeddings],
             dim=2,
         )
         return mash_embeddings
