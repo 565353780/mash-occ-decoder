@@ -14,7 +14,7 @@ from mash_occ_decoder.Module.detector import Detector
 
 
 def demo():
-    model_file_path = "./output/20240424_11:27:16/model_last.pth"
+    model_file_path = "./output/20240424_13:24:16/model_last.pth"
     dtype = torch.float32
     device = "cuda:0"
 
