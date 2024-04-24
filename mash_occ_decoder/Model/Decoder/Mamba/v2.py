@@ -21,7 +21,7 @@ class MashDecoder(nn.Module):
         sh_degree: int = 3,
         d_hidden: int = 400,
         d_hidden_embed: int = 100,
-        n_layer: int = 24,
+        n_layer: int = 96,
         n_cross: int = 4,
         ssm_cfg=None,
         norm_epsilon: float = 1e-5,
