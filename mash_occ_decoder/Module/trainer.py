@@ -12,7 +12,6 @@ from torch.optim.lr_scheduler import (
 )
 
 from mash_occ_decoder.Dataset.sdf import SDFDataset
-from mash_occ_decoder.Loss.focal import FocalLoss
 from mash_occ_decoder.Method.time import getCurrentTime
 from mash_occ_decoder.Method.path import createFileFolder
 from mash_occ_decoder.Model.mash_decoder import MashDecoder

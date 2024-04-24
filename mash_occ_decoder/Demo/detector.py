@@ -14,7 +14,7 @@ from mash_occ_decoder.Module.detector import Detector
 
 
 def demo():
-    model_file_path = "./output/20240423_21:51:01/model_last.pth"
+    model_file_path = "./output/20240424_11:27:16/model_last.pth"
     dtype = torch.float32
     device = "cuda:0"
 
@@ -23,12 +23,12 @@ def demo():
 
     detector = Detector(model_file_path, dtype, device)
 
-    for i in range(1, 2):
+    for i in range(1):
         mash_params_file_path, sdf_file_path = sdf_dataset.paths_list[i]
         gt_mesh_file_path = sdf_file_path.replace(
-            sdf_dataset.sdf_folder_path + "ShapeNet/sdf/",
-            "/home/chli/chLi/Dataset/NormalizedMesh/ShapeNet/normalized_mesh/",
-        ).replace("_obj.npy", ".obj")
+            sdf_dataset.sdf_folder_path + "ShapeNet/",
+            "/home/chli/chLi/Dataset/NormalizedMesh/ShapeNet/",
+        ).replace(".npy", ".obj")
 
         if True:
             mesh = detector.detectFile(mash_params_file_path)

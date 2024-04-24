@@ -20,7 +20,7 @@ class MashDecoder(nn.Module):
         mask_degree: int = 4,
         sh_degree: int = 3,
         d_hidden: int = 400,
-        d_hidden_embed: int = 64,
+        d_hidden_embed: int = 48,
         n_layer: int = 24,
         n_cross: int = 4,
         ssm_cfg=None,
@@ -39,12 +39,9 @@ class MashDecoder(nn.Module):
         self.mask_dim = 2 * mask_degree + 1
         self.sh_dim = (sh_degree + 1) ** 2
 
-        assert d_hidden % 4 == 0
+        self.anchor_dim = self.mask_dim + self.sh_dim + 6
+        self.anchor_dim = 400
 
-        self.rotation_embed = PointEmbed(3, d_hidden_embed, d_hidden // 4)
-        self.position_embed = PointEmbed(3, d_hidden_embed, d_hidden // 4)
-        self.mask_embed = PointEmbed(self.mask_dim, d_hidden_embed, d_hidden // 4)
-        self.sh_embed = PointEmbed(self.sh_dim, d_hidden_embed, d_hidden // 4)
         self.point_embed = PointEmbed(3, d_hidden_embed, d_hidden)
 
         self.fused_add_norm = fused_add_norm
@@ -67,7 +64,7 @@ class MashDecoder(nn.Module):
         self.layers = nn.ModuleList(
             [
                 create_block(
-                    d_hidden,
+                    self.anchor_dim,
                     ssm_cfg=ssm_cfg,
                     norm_epsilon=norm_epsilon,
                     rms_norm=rms_norm,
@@ -82,31 +79,17 @@ class MashDecoder(nn.Module):
 
         self.decoder_cross_attn = PreNorm(
             d_hidden,
-            Attention(d_hidden, d_hidden, heads=n_cross, dim_head=d_hidden),
-            context_dim=d_hidden,
+            Attention(d_hidden, self.anchor_dim, heads=n_cross, dim_head=d_hidden),
+            context_dim=self.anchor_dim,
         )
         self.decoder_ff = PreNorm(d_hidden, FeedForward(d_hidden))
 
         self.to_outputs = nn.Linear(d_hidden, 1)
         return
 
-    def embedMash(self, mash_params: torch.Tensor) -> torch.Tensor:
-        rotation_embeddings = self.rotation_embed(mash_params[:, :, :3])
-        position_embeddings = self.position_embed(mash_params[:, :, 3:6])
-        mask_embeddings = self.mask_embed(mash_params[:, :, 6 : 6 + self.mask_dim])
-        sh_embeddings = self.sh_embed(mash_params[:, :, 6 + self.mask_dim :])
-
-        mash_embeddings = torch.cat(
-            [rotation_embeddings, position_embeddings, mask_embeddings, sh_embeddings],
-            dim=2,
-        )
-        return mash_embeddings
-
     def forward(self, data_dict):
-        mash_params = data_dict["mash_params"]
+        x = data_dict["mash_params"].permute(0, 2, 1)
         queries = data_dict["qry"]
-
-        x = self.embedMash(mash_params)
 
         for layer in self.layers:
             x, residual = layer(x)

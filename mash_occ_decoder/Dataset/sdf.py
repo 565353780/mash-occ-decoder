@@ -16,9 +16,15 @@ class SDFDataset(Dataset):
         self.split = split
         self.n_qry = n_qry
 
+        noise_label = "0_025"
+
         self.mash_folder_path = self.dataset_root_folder_path + "MashV2/"
-        self.sdf_folder_path = self.dataset_root_folder_path + "SampledSDF/"
-        self.split_folder_path = self.dataset_root_folder_path + "MashOCCSplit/"
+        self.sdf_folder_path = (
+            self.dataset_root_folder_path + "SampledSDF_" + noise_label + "/"
+        )
+        self.split_folder_path = (
+            self.dataset_root_folder_path + "MashOCCSplit_" + noise_label + "/"
+        )
 
         assert os.path.exists(self.mash_folder_path)
         assert os.path.exists(self.sdf_folder_path)

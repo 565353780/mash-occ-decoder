@@ -5,7 +5,7 @@ from mash_occ_decoder.Module.trainer import Trainer
 
 def demo():
     dataset_root_folder_path = "/home/chli/Dataset/"
-    batch_size = 30
+    batch_size = 50
     num_workers = 4
     n_qry = 4000
     model_file_path = "./output/mamba-pretrain-4-3-400/model_last.pth"
