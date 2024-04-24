@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+from math import ceil
 from torch import nn
 
 
@@ -9,9 +10,7 @@ class PointEmbed(nn.Module):
 
         cos_sin_data_dim = 2 * data_dim
 
-        assert hidden_dim % cos_sin_data_dim == 0
-
-        self.embedding_dim = hidden_dim
+        self.embedding_dim = ceil(hidden_dim // cos_sin_data_dim) * cos_sin_data_dim
 
         e = (
             torch.pow(2, torch.arange(self.embedding_dim // cos_sin_data_dim)).float()

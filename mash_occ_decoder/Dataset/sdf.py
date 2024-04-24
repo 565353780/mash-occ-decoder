@@ -16,9 +16,9 @@ class SDFDataset(Dataset):
         self.split = split
         self.n_qry = n_qry
 
-        self.mash_folder_path = self.dataset_root_folder_path + "Mash/"
-        self.sdf_folder_path = self.dataset_root_folder_path + "SDF/"
-        self.split_folder_path = self.dataset_root_folder_path + "Split/"
+        self.mash_folder_path = self.dataset_root_folder_path + "MashV2/"
+        self.sdf_folder_path = self.dataset_root_folder_path + "SampledSDF/"
+        self.split_folder_path = self.dataset_root_folder_path + "MashOCCSplit/"
 
         assert os.path.exists(self.mash_folder_path)
         assert os.path.exists(self.sdf_folder_path)
@@ -26,10 +26,10 @@ class SDFDataset(Dataset):
 
         self.paths_list = []
 
-        dataset_name_list = os.listdir(self.split_folder_path + "sdf/")
+        dataset_name_list = os.listdir(self.split_folder_path)
 
         for dataset_name in dataset_name_list:
-            sdf_split_folder_path = self.split_folder_path + "sdf/" + dataset_name + "/"
+            sdf_split_folder_path = self.split_folder_path + dataset_name + "/"
 
             categories = os.listdir(sdf_split_folder_path)
             # FIXME: for detect test only
@@ -38,14 +38,14 @@ class SDFDataset(Dataset):
                 categories = ["03001627"]
 
             for i, category in enumerate(categories):
-                rel_file_path_list_file_path = (
+                modelid_list_file_path = (
                     sdf_split_folder_path + category + "/" + self.split + ".txt"
                 )
-                if not os.path.exists(rel_file_path_list_file_path):
+                if not os.path.exists(modelid_list_file_path):
                     continue
 
-                with open(rel_file_path_list_file_path, "r") as f:
-                    rel_file_path_list = f.read().split()
+                with open(modelid_list_file_path, "r") as f:
+                    modelid_list = f.read().split()
 
                 print("[INFO][SDFDataset::__init__]")
                 print(
@@ -59,23 +59,25 @@ class SDFDataset(Dataset):
                     + str(len(categories))
                     + "..."
                 )
-                for rel_file_path in tqdm(rel_file_path_list):
+                for modelid in tqdm(modelid_list):
                     mash_file_path = (
                         self.mash_folder_path
                         + dataset_name
-                        + "/mash/"
+                        + "/"
                         + category
                         + "/"
-                        + rel_file_path
+                        + modelid
+                        + ".npy"
                     )
 
                     sdf_file_path = (
                         self.sdf_folder_path
                         + dataset_name
-                        + "/sdf/"
+                        + "/"
                         + category
                         + "/"
-                        + rel_file_path
+                        + modelid
+                        + ".npy"
                     )
 
                     self.paths_list.append([mash_file_path, sdf_file_path])

@@ -5,11 +5,11 @@ from mash_occ_decoder.Module.trainer import Trainer
 
 def demo():
     dataset_root_folder_path = "/home/chli/Dataset/"
-    batch_size = 60
+    batch_size = 30
     num_workers = 4
     n_qry = 4000
-    model_file_path = "./output/20240422_20:42:58/model_last.pth"
-    # model_file_path = None
+    model_file_path = "./output/mamba-pretrain-4-3-400/model_last.pth"
+    model_file_path = None
     dtype = torch.float32
     device = "cuda:0"
     warm_epoch_step_num = 100

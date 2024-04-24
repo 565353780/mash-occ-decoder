@@ -8,44 +8,43 @@ class SDFConvertor(object):
     def __init__(self, dataset_root_folder_path: str) -> None:
         self.dataset_root_folder_path = dataset_root_folder_path
 
-        self.mash_folder_path = self.dataset_root_folder_path + "Mash/"
-        self.sdf_folder_path = self.dataset_root_folder_path + "SDF/"
-        self.split_folder_path = self.dataset_root_folder_path + "Split/"
+        self.mash_folder_path = self.dataset_root_folder_path + "MashV2/"
+        self.sdf_folder_path = self.dataset_root_folder_path + "SampledSDF/"
+        self.split_folder_path = self.dataset_root_folder_path + "MashOCCSplit/"
 
         assert os.path.exists(self.mash_folder_path)
         assert os.path.exists(self.sdf_folder_path)
 
         return
 
-    def toCategoryRelFilePathList(self, dataset_name: str, category_name: str) -> list:
+    def toCategoryModelIdList(self, dataset_name: str, category_name: str) -> list:
         mash_category_folder_path = (
-            self.mash_folder_path + dataset_name + "/mash/" + category_name + "/"
+            self.mash_folder_path + dataset_name + "/" + category_name + "/"
         )
         sdf_category_folder_path = (
-            self.sdf_folder_path + dataset_name + "/sdf/" + category_name + "/"
+            self.sdf_folder_path + dataset_name + "/" + category_name + "/"
         )
 
-        rel_file_path_list = []
+        modelid_list = []
 
-        print("[INFO][SDFConvertor::toCategoryRelFilePathList]")
+        print("[INFO][SDFConvertor::toCategoryFilePathList]")
         print("\t start search npy files...")
         print("\t sdf_category_folder_path:", sdf_category_folder_path)
-        for root, _, files in os.walk(sdf_category_folder_path):
-            rel_folder_path = root.split(sdf_category_folder_path)[1] + "/"
+        file_name_list = os.listdir(sdf_category_folder_path)
+        for file_name in file_name_list:
+            if file_name[-4:] != ".npy":
+                continue
 
-            for file_name in files:
-                if file_name[-4:] != ".npy":
-                    continue
+            modelid = file_name.split(".npy")[0]
 
-                mash_file_path = mash_category_folder_path + rel_folder_path + file_name
+            mash_file_path = mash_category_folder_path + modelid + ".npy"
 
-                if not os.path.exists(mash_file_path):
-                    continue
+            if not os.path.exists(mash_file_path):
+                continue
 
-                rel_file_path = rel_folder_path + file_name
-                rel_file_path_list.append(rel_file_path)
+            modelid_list.append(modelid)
 
-        return rel_file_path_list
+        return modelid_list
 
     def convertToCategorySplits(
         self,
@@ -60,33 +59,33 @@ class SDFConvertor(object):
             print("\t dataset_root_folder_path:", self.dataset_root_folder_path)
             return [], [], []
 
-        rel_file_path_list = self.toCategoryRelFilePathList(dataset_name, category_name)
+        modelid_list = self.toCategoryModelIdList(dataset_name, category_name)
 
-        permut_rel_file_path_list = np.random.permutation(rel_file_path_list)
+        permut_modelid_list = np.random.permutation(modelid_list)
 
-        rel_file_path_num = len(rel_file_path_list)
+        modelid_num = len(modelid_list)
 
-        if rel_file_path_num < 3:
+        if modelid_num < 3:
             print("[WARN][SDFConvertor::convertToCategorySplits]")
             print("\t category shape num < 3!")
-            print("\t rel_file_path_num:", rel_file_path_num)
+            print("\t modelid_num:", modelid_num)
             return [], [], []
 
-        train_split_num = ceil(train_scale * rel_file_path_num)
-        val_split_num = ceil(val_scale * rel_file_path_num)
+        train_split_num = ceil(train_scale * modelid_num)
+        val_split_num = ceil(val_scale * modelid_num)
 
-        if rel_file_path_num == 3:
+        if modelid_num == 3:
             train_split_num = 1
             val_split_num = 1
 
-        if train_split_num + val_split_num == rel_file_path_num:
+        if train_split_num + val_split_num == modelid_num:
             train_split_num -= 1
 
-        train_split = permut_rel_file_path_list[:train_split_num]
-        val_split = permut_rel_file_path_list[
+        train_split = permut_modelid_list[:train_split_num]
+        val_split = permut_modelid_list[
             train_split_num : train_split_num + val_split_num
         ]
-        test_split = permut_rel_file_path_list[train_split_num + val_split_num :]
+        test_split = permut_modelid_list[train_split_num + val_split_num :]
 
         return train_split.tolist(), val_split.tolist(), test_split.tolist()
 
@@ -107,7 +106,7 @@ class SDFConvertor(object):
             return False
 
         save_split_folder_path = (
-            self.split_folder_path + "sdf/" + dataset_name + "/" + category_name + "/"
+            self.split_folder_path + dataset_name + "/" + category_name + "/"
         )
 
         os.makedirs(save_split_folder_path, exist_ok=True)
@@ -132,7 +131,7 @@ class SDFConvertor(object):
         train_scale: float = 0.8,
         val_scale: float = 0.1,
     ) -> bool:
-        categories = os.listdir(self.mash_folder_path + dataset_name + "/mash/")
+        categories = os.listdir(self.mash_folder_path + dataset_name + "/")
 
         for i, category in enumerate(categories):
             print("[INFO][SDFConvertor::convertToDatasetSplitFiles]")
