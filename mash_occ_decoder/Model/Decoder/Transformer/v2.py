@@ -15,7 +15,8 @@ class MashDecoder(nn.Module):
         sh_degree: int = 3,
         depth: int = 24,
         hidden_dim: int = 400,
-        hidden_embed_dim: int = 64,
+        hidden_embed_dim: int = 100,
+        hidden_cross_heads: int = 1,
         output_dim=1,
         heads=8,
         dim_head=64,
@@ -63,7 +64,9 @@ class MashDecoder(nn.Module):
 
         self.decoder_cross_attn = PreNorm(
             hidden_dim,
-            Attention(hidden_dim, hidden_dim, heads=1, dim_head=hidden_dim),
+            Attention(
+                hidden_dim, hidden_dim, heads=hidden_cross_heads, dim_head=hidden_dim
+            ),
             context_dim=hidden_dim,
         )
         self.decoder_ff = PreNorm(hidden_dim, FeedForward(hidden_dim))

@@ -49,8 +49,10 @@ class Trainer(object):
         self,
         dataset_root_folder_path: str,
         batch_size: int = 400,
+        accum_iter: int = 1,
         num_workers: int = 4,
         n_qry: int = 200,
+        noise_label_list: list = ["0_25"],
         model_file_path: Union[str, None] = None,
         dtype=torch.float64,
         device: str = "cpu",
@@ -65,6 +67,7 @@ class Trainer(object):
         save_result_folder_path: Union[str, None] = None,
         save_log_folder_path: Union[str, None] = None,
     ) -> None:
+        self.accum_iter = accum_iter
         self.dtype = dtype
         self.device = device
 
@@ -90,13 +93,13 @@ class Trainer(object):
         self.logger = Logger()
 
         self.train_loader = DataLoader(
-            SDFDataset(dataset_root_folder_path, "train", n_qry),
+            SDFDataset(dataset_root_folder_path, "train", n_qry, noise_label_list),
             shuffle=True,
             batch_size=batch_size,
             num_workers=num_workers,
         )
         self.val_loader = DataLoader(
-            SDFDataset(dataset_root_folder_path, "val", n_qry),
+            SDFDataset(dataset_root_folder_path, "val", n_qry, noise_label_list),
             shuffle=False,
             batch_size=batch_size,
             num_workers=num_workers,
@@ -167,7 +170,6 @@ class Trainer(object):
     ) -> dict:
         for key in data.keys():
             data[key] = data[key].to(self.device)
-        optimizer.zero_grad()
 
         gt_occ = data["occ"]
 
@@ -175,8 +177,12 @@ class Trainer(object):
 
         loss = self.loss_fn(occ, gt_occ)
 
-        loss.backward()
-        optimizer.step()
+        accum_loss = loss / self.accum_iter
+        accum_loss.backward()
+
+        if (self.step + 1) % self.accum_iter == 0:
+            optimizer.step()
+            optimizer.zero_grad()
 
         with torch.no_grad():
             acc = cal_occ_acc(occ, gt_occ)
@@ -265,18 +271,29 @@ class Trainer(object):
         print("\t start training ...")
         pbar = tqdm(total=final_step)
         pbar.update(self.step)
+
+        loss_dict_list = []
         while self.step < final_step:
             self.model.train()
 
             for data in tqdm(self.train_loader):
                 train_loss_dict = self.trainStep(data, optimizer)
 
+                loss_dict_list.append(train_loss_dict)
+
                 lr = self.getLr(optimizer)
 
                 if self.logger.isValid():
-                    for key, item in train_loss_dict.items():
-                        self.logger.addScalar("Train/" + key, item, self.step)
-                    self.logger.addScalar("Train/Lr", lr, self.step)
+                    if (self.step + 1) % self.accum_iter == 0:
+                        for key in train_loss_dict.keys():
+                            value = 0
+                            for i in range(len(loss_dict_list)):
+                                value += loss_dict_list[i][key]
+                            value /= len(loss_dict_list)
+                            self.logger.addScalar("Train/" + key, value, self.step)
+                        self.logger.addScalar("Train/Lr", lr, self.step)
+
+                        loss_dict_list = []
 
                     gt_occ = data["occ"]
                     occ_shape = gt_occ.shape

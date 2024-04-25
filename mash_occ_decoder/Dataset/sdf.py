@@ -11,81 +11,91 @@ class SDFDataset(Dataset):
         dataset_root_folder_path: str,
         split: str = "train",
         n_qry: int = 200,
-        noise_label: str = "0_25",
+        noise_label_list: list = ["0_25"],
     ) -> None:
         self.dataset_root_folder_path = dataset_root_folder_path
         self.split = split
         self.n_qry = n_qry
 
         self.mash_folder_path = self.dataset_root_folder_path + "MashV2/"
-        self.sdf_folder_path = (
-            self.dataset_root_folder_path + "SampledSDF_" + noise_label + "/"
-        )
-        self.split_folder_path = (
-            self.dataset_root_folder_path + "MashOCCSplit_" + noise_label + "/"
-        )
-
         assert os.path.exists(self.mash_folder_path)
-        assert os.path.exists(self.sdf_folder_path)
-        assert os.path.exists(self.split_folder_path)
+
+        self.sdf_folder_path_list = []
+        self.split_folder_path_list = []
+        for noise_label in noise_label_list:
+            sdf_folder_path = (
+                self.dataset_root_folder_path + "SampledSDF_" + noise_label + "/"
+            )
+            split_folder_path = (
+                self.dataset_root_folder_path + "MashOCCSplit_" + noise_label + "/"
+            )
+            assert os.path.exists(sdf_folder_path)
+            assert os.path.exists(split_folder_path)
+
+            self.sdf_folder_path_list.append(sdf_folder_path)
+            self.split_folder_path_list.append(split_folder_path)
 
         self.paths_list = []
 
-        dataset_name_list = os.listdir(self.split_folder_path)
+        for i in range(len(self.sdf_folder_path_list)):
+            split_folder_path = self.split_folder_path_list[i]
+            sdf_folder_path = self.sdf_folder_path_list[i]
 
-        for dataset_name in dataset_name_list:
-            sdf_split_folder_path = self.split_folder_path + dataset_name + "/"
+            dataset_name_list = os.listdir(split_folder_path)
 
-            categories = os.listdir(sdf_split_folder_path)
-            # FIXME: for detect test only
-            if self.split == "test":
-                # categories = ["02691156"]
-                categories = ["03001627"]
+            for dataset_name in dataset_name_list:
+                sdf_split_folder_path = split_folder_path + dataset_name + "/"
 
-            for i, category in enumerate(categories):
-                modelid_list_file_path = (
-                    sdf_split_folder_path + category + "/" + self.split + ".txt"
-                )
-                if not os.path.exists(modelid_list_file_path):
-                    continue
+                categories = os.listdir(sdf_split_folder_path)
+                # FIXME: for detect test only
+                if self.split == "test":
+                    # categories = ["02691156"]
+                    categories = ["03001627"]
 
-                with open(modelid_list_file_path, "r") as f:
-                    modelid_list = f.read().split()
-
-                print("[INFO][SDFDataset::__init__]")
-                print(
-                    "\t start load dataset: "
-                    + dataset_name
-                    + "["
-                    + category
-                    + "], "
-                    + str(i + 1)
-                    + "/"
-                    + str(len(categories))
-                    + "..."
-                )
-                for modelid in tqdm(modelid_list):
-                    mash_file_path = (
-                        self.mash_folder_path
-                        + dataset_name
-                        + "/"
-                        + category
-                        + "/"
-                        + modelid
-                        + ".npy"
+                for j, category in enumerate(categories):
+                    modelid_list_file_path = (
+                        sdf_split_folder_path + category + "/" + self.split + ".txt"
                     )
+                    if not os.path.exists(modelid_list_file_path):
+                        continue
 
-                    sdf_file_path = (
-                        self.sdf_folder_path
+                    with open(modelid_list_file_path, "r") as f:
+                        modelid_list = f.read().split()
+
+                    print("[INFO][SDFDataset::__init__]")
+                    print(
+                        "\t start load dataset: "
                         + dataset_name
-                        + "/"
+                        + "["
                         + category
+                        + "], "
+                        + str(j + 1)
                         + "/"
-                        + modelid
-                        + ".npy"
+                        + str(len(categories))
+                        + "..."
                     )
+                    for modelid in tqdm(modelid_list):
+                        mash_file_path = (
+                            self.mash_folder_path
+                            + dataset_name
+                            + "/"
+                            + category
+                            + "/"
+                            + modelid
+                            + ".npy"
+                        )
 
-                    self.paths_list.append([mash_file_path, sdf_file_path])
+                        sdf_file_path = (
+                            sdf_folder_path
+                            + dataset_name
+                            + "/"
+                            + category
+                            + "/"
+                            + modelid
+                            + ".npy"
+                        )
+
+                        self.paths_list.append([mash_file_path, sdf_file_path])
         return
 
     def __len__(self):
