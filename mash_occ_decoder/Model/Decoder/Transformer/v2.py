@@ -16,7 +16,7 @@ class MashDecoder(nn.Module):
         depth: int = 24,
         hidden_dim: int = 400,
         hidden_embed_dim: int = 100,
-        hidden_cross_heads: int = 1,
+        hidden_cross_heads: int = 4,
         output_dim=1,
         heads=8,
         dim_head=64,
