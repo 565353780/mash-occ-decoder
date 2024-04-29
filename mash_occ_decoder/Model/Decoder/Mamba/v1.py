@@ -17,8 +17,8 @@ from mash_occ_decoder.Model.Layer.point_embed import PointEmbed
 class MashDecoder(nn.Module):
     def __init__(
         self,
-        mask_degree: int = 4,
-        sh_degree: int = 3,
+        mask_degree: int = 3,
+        sh_degree: int = 2,
         d_hidden: int = 400,
         d_hidden_embed: int = 48,
         n_layer: int = 24,

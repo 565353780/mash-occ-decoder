@@ -11,4 +11,4 @@ except:
     print('[ERROR][mash_decoder::import]')
     print('\t import mamba model failed! current env can only run with transformer models')
 
-MashDecoder = TAllEmbed
+MashDecoder = MSource
