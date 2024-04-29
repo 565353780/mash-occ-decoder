@@ -5,17 +5,19 @@ from tqdm import tqdm
 from torch.utils.data import Dataset
 
 
-class AEDataset(Dataset):
+class MashDataset(Dataset):
     def __init__(
         self,
         dataset_root_folder_path: str,
         split: str = "train",
+        preload_data: bool = False,
     ) -> None:
         self.dataset_root_folder_path = dataset_root_folder_path
         self.split = split
+        self.preload_data = preload_data
 
         self.mash_folder_path = self.dataset_root_folder_path + "MashV3/"
-        self.split_folder_path = self.dataset_root_folder_path + "Split/AutoEncoder/"
+        self.split_folder_path = self.dataset_root_folder_path + "SplitAutoEncoder/"
         assert os.path.exists(self.mash_folder_path)
         assert os.path.exists(self.split_folder_path)
 
@@ -42,7 +44,7 @@ class AEDataset(Dataset):
                 with open(modelid_list_file_path, "r") as f:
                     modelid_list = f.read().split()
 
-                print("[INFO][AEDataset::__init__]")
+                print("[INFO][MashDataset::__init__]")
                 print(
                     "\t start load dataset: "
                     + dataset_name
@@ -65,21 +67,30 @@ class AEDataset(Dataset):
                         + ".npy"
                     )
 
-                    self.paths_list.append([mash_file_path])
+                    if self.preload_data:
+                        mash_params = np.load(mash_file_path, allow_pickle=True).item()
+                        self.paths_list.append(mash_params)
+                    else:
+                        self.paths_list.append(mash_file_path)
+
         return
 
     def __len__(self):
-        return len(self.paths_list)
+        return len(self.paths_list) * 1000
 
     def __getitem__(self, index):
+        index = index % len(self.paths_list)
+
         if self.split == "train":
             np.random.seed()
         else:
             np.random.seed(1234)
 
-        mash_file_path = self.paths_list[index][0]
-
-        mash_params = np.load(mash_file_path, allow_pickle=True).item()
+        if self.preload_data:
+            mash_params = self.paths_list[index]
+        else:
+            mash_file_path = self.paths_list[index]
+            mash_params = np.load(mash_file_path, allow_pickle=True).item()
 
         rotate_vectors = mash_params["rotate_vectors"]
         positions = mash_params["positions"]
