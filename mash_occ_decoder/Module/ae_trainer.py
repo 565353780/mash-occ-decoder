@@ -1,6 +1,5 @@
 import os
 import torch
-from torch import nn
 from tqdm import tqdm
 from typing import Union
 from torch.utils.data import DataLoader
@@ -13,7 +12,7 @@ from torch.optim.lr_scheduler import (
 from mash_occ_decoder.Dataset.mash import MashDataset
 from mash_occ_decoder.Method.time import getCurrentTime
 from mash_occ_decoder.Method.path import createFileFolder
-from mash_occ_decoder.Model.auto_encoder import AutoEncoder
+from mash_occ_decoder.Model.mae import MaskedAutoencoderViT
 from mash_occ_decoder.Module.logger import Logger
 
 
@@ -66,10 +65,7 @@ class Trainer(object):
             num_workers=num_workers,
         )
 
-        self.model = AutoEncoder().to(self.device)
-        print(self.model)
-
-        self.loss_fn = nn.MSELoss()
+        self.model = MaskedAutoencoderViT().to(self.device)
 
         self.initRecords()
 
@@ -120,9 +116,7 @@ class Trainer(object):
 
         gt_mash = data["mash_params"]
 
-        mash = self.model(gt_mash)
-
-        loss = self.loss_fn(mash, gt_mash)
+        loss, mash, mask = self.model(gt_mash)
 
         loss.backward()
 
@@ -148,9 +142,7 @@ class Trainer(object):
 
             gt_mash = data["mash_params"]
 
-            mash = self.model(gt_mash)
-
-            loss = self.loss_fn(mash, gt_mash)
+            loss, mash, mask = self.model(gt_mash)
 
             avg_loss += loss.item()
 

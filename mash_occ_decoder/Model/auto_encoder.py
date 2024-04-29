@@ -9,8 +9,9 @@ class AutoEncoder(nn.Module):
         self.anchor_dim = 22
 
         if hidden_dims is None:
-            data_dim = self.anchor_num * self.anchor_dim
+            data_dim = self.anchor_dim
             hidden_dims = [
+                data_dim,
                 data_dim,
                 data_dim // 2,
                 data_dim // 2,
@@ -30,8 +31,6 @@ class AutoEncoder(nn.Module):
         return
 
     def forward(self, x):
-        x = x.reshape(x.shape[0], -1)
         encoded = self.encoder(x)
         decoded = self.decoder(encoded)
-        decoded = decoded.reshape(x.shape[0], self.anchor_num, self.anchor_dim)
         return decoded
