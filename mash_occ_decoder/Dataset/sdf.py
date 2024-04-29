@@ -17,7 +17,7 @@ class SDFDataset(Dataset):
         self.split = split
         self.n_qry = n_qry
 
-        self.mash_folder_path = self.dataset_root_folder_path + "MashV2/"
+        self.mash_folder_path = self.dataset_root_folder_path + "MashV3/"
         assert os.path.exists(self.mash_folder_path)
 
         self.sdf_folder_path_list = []

@@ -1,23 +1,24 @@
 import torch
 
-from mash_occ_decoder.Module.sdf_convertor import SDFConvertor
+from mash_occ_decoder.Module.Convertor.sdf_split import Convertor
 from mash_occ_decoder.Module.trainer import Trainer
 
 
 def demo():
     dataset_root_folder_path = "/home/chli/Dataset/"
-    batch_size = 16
-    accum_iter = 16
+    batch_size = 32
+    accum_iter = 1
     num_workers = 4
-    n_qry = 12000
+    n_qry = 8000
     noise_label_list = ["0_25", "0_025", "0_0025"]
     model_file_path = "./output/t-v3-2/model_last.pth"
+    model_file_path = None
     dtype = torch.float32
     device = "cuda:0"
     warm_epoch_step_num = 100
     warm_epoch_num = 0
     finetune_step_num = 100000000
-    lr = 5e-5
+    lr = 3e-5
     weight_decay = 1e-10
     factor = 0.99
     patience = 10000
@@ -29,8 +30,8 @@ def demo():
     val_scale = 0.1
 
     for noise_label in noise_label_list:
-        sdf_convertor = SDFConvertor(dataset_root_folder_path, noise_label)
-        sdf_convertor.convertToSplitFiles(train_scale, val_scale)
+        convertor = Convertor(dataset_root_folder_path, noise_label)
+        convertor.convertToSplitFiles(train_scale, val_scale)
 
     trainer = Trainer(
         dataset_root_folder_path,

@@ -4,11 +4,11 @@ from math import ceil
 from typing import Tuple
 
 
-class SDFConvertor(object):
+class Convertor(object):
     def __init__(self, dataset_root_folder_path: str, noise_label: str) -> None:
         self.dataset_root_folder_path = dataset_root_folder_path
 
-        self.mash_folder_path = self.dataset_root_folder_path + "MashV2/"
+        self.mash_folder_path = self.dataset_root_folder_path + "MashV3/"
         self.sdf_folder_path = (
             self.dataset_root_folder_path + "SampledSDF_" + noise_label + "/"
         )
@@ -31,7 +31,7 @@ class SDFConvertor(object):
 
         modelid_list = []
 
-        print("[INFO][SDFConvertor::toCategoryFilePathList]")
+        print("[INFO][Convertor::toCategoryFilePathList]")
         print("\t start search npy files...")
         print("\t sdf_category_folder_path:", sdf_category_folder_path)
         file_name_list = os.listdir(sdf_category_folder_path)
@@ -58,7 +58,7 @@ class SDFConvertor(object):
         val_scale: float = 0.1,
     ) -> Tuple[list, list, list]:
         if not os.path.exists(self.dataset_root_folder_path):
-            print("[ERROR][SDFConvertor::convertToCategorySplits]")
+            print("[ERROR][Convertor::convertToCategorySplits]")
             print("\t dataset root folder not exist!")
             print("\t dataset_root_folder_path:", self.dataset_root_folder_path)
             return [], [], []
@@ -70,7 +70,7 @@ class SDFConvertor(object):
         modelid_num = len(modelid_list)
 
         if modelid_num < 3:
-            print("[WARN][SDFConvertor::convertToCategorySplits]")
+            print("[WARN][Convertor::convertToCategorySplits]")
             print("\t category shape num < 3!")
             print("\t modelid_num:", modelid_num)
             return [], [], []
@@ -105,7 +105,7 @@ class SDFConvertor(object):
         )
 
         if len(train_split) + len(val_split) + len(test_split) == 0:
-            print("[ERROR][SDFConvertor::convertToCategorySplitFiles]")
+            print("[ERROR][Convertor::convertToCategorySplitFiles]")
             print("\t convertToCategorySplits failed!")
             return False
 
@@ -138,7 +138,7 @@ class SDFConvertor(object):
         categories = os.listdir(self.mash_folder_path + dataset_name + "/")
 
         for i, category in enumerate(categories):
-            print("[INFO][SDFConvertor::convertToDatasetSplitFiles]")
+            print("[INFO][Convertor::convertToDatasetSplitFiles]")
             print(
                 "\t start convert sdf dataset: "
                 + dataset_name
