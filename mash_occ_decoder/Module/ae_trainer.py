@@ -13,7 +13,7 @@ from torch.optim.lr_scheduler import (
 from mash_occ_decoder.Dataset.mash import MashDataset
 from mash_occ_decoder.Method.time import getCurrentTime
 from mash_occ_decoder.Method.path import createFileFolder
-from mash_occ_decoder.Model.sh_ae import SHAutoEncoder
+from mash_occ_decoder.Model.sh_decoder import SHDecoder
 from mash_occ_decoder.Module.logger import Logger
 
 
@@ -66,7 +66,7 @@ class Trainer(object):
             num_workers=num_workers,
         )
 
-        self.model = SHAutoEncoder().to(self.device)
+        self.model = SHDecoder().to(self.device)
 
         self.initRecords()
 

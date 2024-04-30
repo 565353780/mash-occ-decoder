@@ -6,7 +6,7 @@ from typing import Union
 
 from ma_sh.Model.mash import Mash
 
-from mash_occ_decoder.Model.sh_ae import SHAutoEncoder
+from mash_occ_decoder.Model.sh_decoder import SHDecoder
 
 
 class Detector(object):
@@ -19,7 +19,7 @@ class Detector(object):
         self.dtype = dtype
         self.device = device
 
-        self.model = SHAutoEncoder().to(self.device)
+        self.model = SHDecoder().to(self.device)
 
         if model_file_path is not None:
             self.loadModel(model_file_path)
