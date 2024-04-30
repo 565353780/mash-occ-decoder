@@ -12,7 +12,7 @@ def demo():
     model_file_path = None
     dtype = torch.float32
     device = "cuda:0"
-    lr = 2e-3
+    lr = 5e-4
     weight_decay = 1e-10
     factor = 0.99
     patience = 10000

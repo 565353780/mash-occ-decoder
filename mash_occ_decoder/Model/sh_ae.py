@@ -16,7 +16,7 @@ class SHAutoEncoder(nn.Module):
         depth: int = 24,
         hidden_dim: int = 400,
         hidden_embed_dim: int = 100,
-        encode_dim: int = 4,
+        encode_dim: int = 8,
         decode_cross_heads: int = 4,
         heads=8,
         dim_head=64,

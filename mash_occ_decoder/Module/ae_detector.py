@@ -6,7 +6,7 @@ from typing import Union
 
 from ma_sh.Model.mash import Mash
 
-from mash_occ_decoder.Model.auto_encoder import AutoEncoder
+from mash_occ_decoder.Model.sh_ae import SHAutoEncoder
 
 
 class Detector(object):
@@ -19,7 +19,7 @@ class Detector(object):
         self.dtype = dtype
         self.device = device
 
-        self.model = AutoEncoder().to(self.device)
+        self.model = SHAutoEncoder().to(self.device)
 
         if model_file_path is not None:
             self.loadModel(model_file_path)
@@ -70,11 +70,11 @@ class Detector(object):
 
         mash_params = self.model(gt_mash_params)[0]
 
-        rotate_vectors = mash_params[:, :3]
-        positions = mash_params[:, 3:6]
+        rotate_vectors = gt_rotate_vectors
+        positions = gt_positions
         sh2d = 2 * mask_degree_max + 1
-        mask_params = mash_params[:, 6 : 6 + sh2d]
-        sh_params = mash_params[:, 6 + sh2d :]
+        mask_params = mash_params[:, :sh2d]
+        sh_params = mash_params[:, sh2d:]
 
         mash = Mash(
             anchor_num,
