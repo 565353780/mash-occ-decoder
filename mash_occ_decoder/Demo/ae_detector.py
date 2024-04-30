@@ -28,7 +28,7 @@ def demo():
             continue
         valid_model_folder_name_list.append(model_folder_name)
 
-    model_file_path = "./output/" + valid_model_folder_name_list[-1] + "/model_best.pth"
+    model_file_path = "./output/" + valid_model_folder_name_list[-1] + "/model_last.pth"
     print(model_file_path)
     dtype = torch.float32
     device = "cuda:0"

@@ -77,7 +77,7 @@ class MashDataset(Dataset):
 
     def __len__(self):
         if self.split == "train":
-            return len(self.paths_list) * 4
+            return len(self.paths_list) * 10
         else:
             return len(self.paths_list)
 
@@ -100,24 +100,34 @@ class MashDataset(Dataset):
         mask_params = mash_params["mask_params"]
         sh_params = mash_params["sh_params"]
 
-        scale_range = [0.5, 2.0]
-        move_range = [-0.6, 0.6]
+        if self.split == "train":
+            scale_range = [0.5, 2.0]
+            move_range = [-0.6, 0.6]
 
-        random_scale = (
-            scale_range[0] + (scale_range[1] - scale_range[0]) * np.random.rand()
-        )
-        random_translate = move_range[0] + (
-            move_range[1] - move_range[0]
-        ) * np.random.rand(3)
+            random_scale = (
+                scale_range[0] + (scale_range[1] - scale_range[0]) * np.random.rand()
+            )
+            random_translate = move_range[0] + (
+                move_range[1] - move_range[0]
+            ) * np.random.rand(3)
 
-        mash_params = np.hstack(
-            [
-                rotate_vectors,
-                positions * random_scale + random_translate,
-                mask_params,
-                sh_params * random_scale,
-            ]
-        )
+            mash_params = np.hstack(
+                [
+                    rotate_vectors,
+                    positions * random_scale + random_translate,
+                    mask_params,
+                    sh_params * random_scale,
+                ]
+            )
+        else:
+            mash_params = np.hstack(
+                [
+                    rotate_vectors,
+                    positions,
+                    mask_params,
+                    sh_params,
+                ]
+            )
 
         mash_params = mash_params[np.random.permutation(mash_params.shape[0])]
 

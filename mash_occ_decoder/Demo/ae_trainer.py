@@ -6,13 +6,12 @@ from mash_occ_decoder.Module.ae_trainer import Trainer
 
 def demo():
     dataset_root_folder_path = "/home/chli/Dataset/"
-    batch_size = 128
-    num_workers = 4
-    model_file_path = "./output/t-v3-2/model_last.pth"
-    model_file_path = None
+    batch_size = 512
+    num_workers = 0
+    model_file_path = "./output/20240430_13:50:44/model_last.pth"
     dtype = torch.float32
     device = "cuda:0"
-    lr = 1e-5
+    lr = 1e-3
     weight_decay = 1e-10
     factor = 0.99
     patience = 10000
