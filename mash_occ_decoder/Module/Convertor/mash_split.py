@@ -9,9 +9,7 @@ class Convertor(object):
         self.dataset_root_folder_path = dataset_root_folder_path
 
         self.mash_folder_path = self.dataset_root_folder_path + "MashV3/"
-        self.split_folder_path = (
-            self.dataset_root_folder_path + "SplitAutoEncoder/"
-        )
+        self.split_folder_path = self.dataset_root_folder_path + "SplitAutoEncoder/"
 
         assert os.path.exists(self.mash_folder_path)
 
@@ -41,6 +39,7 @@ class Convertor(object):
 
             modelid_list.append(modelid)
 
+        modelid_list.sort()
         return modelid_list
 
     def convertToCategorySplits(

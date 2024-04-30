@@ -48,6 +48,7 @@ class Convertor(object):
 
             modelid_list.append(modelid)
 
+        modelid_list.sort()
         return modelid_list
 
     def convertToCategorySplits(
