@@ -2,10 +2,7 @@ import torch
 from torch import nn
 from functools import partial
 
-try:
-    from mamba_ssm.ops.triton.layernorm import RMSNorm, layer_norm_fn, rms_norm_fn
-except ImportError:
-    RMSNorm, layer_norm_fn, rms_norm_fn = None, None, None
+from mamba_ssm.ops.triton.layernorm import RMSNorm, layer_norm_fn, rms_norm_fn
 
 from mash_occ_decoder.Model.mamba_block import create_block, init_weights
 from mash_occ_decoder.Model.Layer.pre_norm import PreNorm
@@ -47,23 +44,6 @@ class MashDecoder(nn.Module):
         self.sh_embed = PointEmbed(self.sh_dim, d_hidden_embed, d_hidden // 4)
         self.point_embed = PointEmbed(3, d_hidden_embed, d_hidden)
 
-        self.fused_add_norm = fused_add_norm
-        if self.fused_add_norm:
-            if layer_norm_fn is None or rms_norm_fn is None:
-                raise ImportError("Failed to import Triton LayerNorm / RMSNorm kernels")
-
-        self.norm_f = (nn.LayerNorm if not rms_norm else RMSNorm)(
-            d_hidden, eps=norm_epsilon, **factory_kwargs
-        )
-
-        self.apply(
-            partial(
-                init_weights,
-                n_layer=n_layer,
-                **(initializer_cfg if initializer_cfg is not None else {}),
-            )
-        )
-
         self.layers = nn.ModuleList(
             [
                 create_block(
@@ -80,6 +60,11 @@ class MashDecoder(nn.Module):
             ]
         )
 
+        self.norm_f = (nn.LayerNorm if not rms_norm else RMSNorm)(
+            d_hidden, eps=norm_epsilon, **factory_kwargs
+        )
+
+
         self.decoder_cross_attn = PreNorm(
             d_hidden,
             Attention(d_hidden, d_hidden, heads=n_cross, dim_head=d_hidden),
@@ -88,6 +73,14 @@ class MashDecoder(nn.Module):
         self.decoder_ff = PreNorm(d_hidden, FeedForward(d_hidden))
 
         self.to_outputs = nn.Linear(d_hidden, 1)
+
+        self.apply(
+            partial(
+                init_weights,
+                n_layer=n_layer,
+                **(initializer_cfg if initializer_cfg is not None else {}),
+            )
+        )
         return
 
     def embedMash(self, mash_params: torch.Tensor) -> torch.Tensor:
@@ -106,14 +99,29 @@ class MashDecoder(nn.Module):
         mash_params = data_dict["mash_params"]
         queries = data_dict["qry"]
 
-        x = self.embedMash(mash_params)
+        hidden_states = self.embedMash(mash_params)
+        residual = None
 
         for layer in self.layers:
-            x, residual = layer(x)
-            x = x + residual
+            hidden_states, residual = layer(hidden_states, residual)
+
+        if not self.fused_add_norm:
+            residual = (hidden_states + residual) if residual is not None else hidden_states
+            hidden_states = self.norm_f(residual.to(dtype=self.norm_f.weight.dtype))
+        else:
+            fused_add_norm_fn = rms_norm_fn if isinstance(self.norm_f, RMSNorm) else layer_norm_fn
+            hidden_states = fused_add_norm_fn(
+                hidden_states,
+                self.norm_f.weight,
+                self.norm_f.bias,
+                eps=self.norm_f.eps,
+                residual=residual,
+                prenorm=False,
+                residual_in_fp32=self.residual_in_fp32,
+            )
 
         queries_embeddings = self.point_embed(queries)
-        latents = self.decoder_cross_attn(queries_embeddings, context=x)
+        latents = self.decoder_cross_attn(queries_embeddings, context=hidden_states)
 
         latents = latents + self.decoder_ff(latents)
 

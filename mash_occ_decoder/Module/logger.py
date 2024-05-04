@@ -1,4 +1,3 @@
-import os
 from typing import Union
 
 from torch.utils.tensorboard import SummaryWriter
@@ -12,6 +11,8 @@ class Logger(object):
 
         if log_folder_path is not None:
             self.setLogFolder(log_folder_path)
+
+        self.error_outputed = False
         return
 
     def reset(self) -> bool:
@@ -24,8 +25,6 @@ class Logger(object):
         return self.summary_writer is not None
 
     def setLogFolder(self, log_folder_path: str) -> bool:
-        os.makedirs(log_folder_path, exist_ok=True)
-
         self.summary_writer = SummaryWriter(log_folder_path)
         return True
 
@@ -45,8 +44,12 @@ class Logger(object):
 
     def addScalar(self, name: str, value: float, step: Union[int, None] = None) -> bool:
         if not self.isValid():
+            if self.error_outputed:
+                return False
+
             print("[ERROR][Logger::addScalar]")
             print("\t isValid failed!")
+            self.error_outputed = True
             return False
 
         if step is not None:
