@@ -32,6 +32,7 @@ class MashDecoder(nn.Module):
         factory_kwargs = {"device": device, "dtype": dtype}
         super().__init__()
         self.residual_in_fp32 = residual_in_fp32
+        self.fused_add_norm = fused_add_norm
 
         self.mask_dim = 2 * mask_degree + 1
         self.sh_dim = (sh_degree + 1) ** 2
