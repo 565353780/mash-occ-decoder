@@ -269,14 +269,13 @@ class Trainer(object):
 
         print("[INFO][Trainer::train]")
         print("\t start training ...")
-        pbar = tqdm(total=final_step)
-        pbar.update(self.step)
 
         loss_dict_list = []
         while self.step < final_step:
             self.model.train()
 
-            for data in tqdm(self.train_loader):
+            pbar = tqdm(total=len(self.train_loader))
+            for data in self.train_loader:
                 train_loss_dict = self.trainStep(data, optimizer)
 
                 loss_dict_list.append(train_loss_dict)

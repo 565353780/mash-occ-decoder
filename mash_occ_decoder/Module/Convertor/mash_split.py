@@ -8,8 +8,8 @@ class Convertor(object):
     def __init__(self, dataset_root_folder_path: str) -> None:
         self.dataset_root_folder_path = dataset_root_folder_path
 
-        self.mash_folder_path = self.dataset_root_folder_path + "MashV3/"
-        self.split_folder_path = self.dataset_root_folder_path + "SplitAutoEncoder/"
+        self.mash_folder_path = self.dataset_root_folder_path + "MashV4/"
+        self.split_folder_path = self.dataset_root_folder_path + "SplitMashOCCDecoder/"
 
         assert os.path.exists(self.mash_folder_path)
 
@@ -31,11 +31,6 @@ class Convertor(object):
                 continue
 
             modelid = file_name.split(".npy")[0]
-
-            mash_file_path = mash_category_folder_path + modelid + ".npy"
-
-            if not os.path.exists(mash_file_path):
-                continue
 
             modelid_list.append(modelid)
 
@@ -132,7 +127,7 @@ class Convertor(object):
         for i, category in enumerate(categories):
             print("[INFO][Convertor::convertToDatasetSplitFiles]")
             print(
-                "\t start convert sdf dataset: "
+                "\t start convert mash dataset: "
                 + dataset_name
                 + "["
                 + category

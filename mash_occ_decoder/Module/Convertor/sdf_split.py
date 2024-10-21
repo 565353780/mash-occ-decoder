@@ -8,7 +8,7 @@ class Convertor(object):
     def __init__(self, dataset_root_folder_path: str, noise_label: str) -> None:
         self.dataset_root_folder_path = dataset_root_folder_path
 
-        self.mash_folder_path = self.dataset_root_folder_path + "MashV3/"
+        self.mash_folder_path = self.dataset_root_folder_path + "MashV4/"
         self.sdf_folder_path = (
             self.dataset_root_folder_path + "SampledSDF_" + noise_label + "/"
         )
@@ -22,12 +22,21 @@ class Convertor(object):
         return
 
     def toCategoryModelIdList(self, dataset_name: str, category_name: str) -> list:
-        mash_category_folder_path = (
-            self.mash_folder_path + dataset_name + "/" + category_name + "/"
-        )
         sdf_category_folder_path = (
             self.sdf_folder_path + dataset_name + "/" + category_name + "/"
         )
+        if not os.path.exists(sdf_category_folder_path):
+            print('[ERROR][Convertor::toCategoryModelIdList]')
+            print('\t sdf category folder not exist!')
+            print('\t sdf_category_folder_path:', sdf_category_folder_path)
+            return []
+
+        mash_category_folder_path = (
+            self.mash_folder_path + dataset_name + "/" + category_name + "/"
+        )
+
+        mash_category_filename_list = os.listdir(mash_category_folder_path)
+
 
         modelid_list = []
 
@@ -39,12 +48,10 @@ class Convertor(object):
             if file_name[-4:] != ".npy":
                 continue
 
-            modelid = file_name.split(".npy")[0]
-
-            mash_file_path = mash_category_folder_path + modelid + ".npy"
-
-            if not os.path.exists(mash_file_path):
+            if file_name not in mash_category_filename_list:
                 continue
+
+            modelid = file_name.split(".npy")[0]
 
             modelid_list.append(modelid)
 

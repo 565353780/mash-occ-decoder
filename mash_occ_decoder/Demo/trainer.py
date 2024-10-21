@@ -6,7 +6,7 @@ from mash_occ_decoder.Module.trainer import Trainer
 
 def demo():
     dataset_root_folder_path = "/home/chli/Dataset/"
-    batch_size = 32
+    batch_size = 16
     accum_iter = 1
     num_workers = 4
     n_qry = 8000
@@ -18,7 +18,7 @@ def demo():
     warm_epoch_step_num = 100
     warm_epoch_num = 0
     finetune_step_num = 100000000
-    lr = 3e-5
+    lr = 1e-4
     weight_decay = 1e-10
     factor = 0.99
     patience = 10000

@@ -16,8 +16,8 @@ class MashDataset(Dataset):
         self.split = split
         self.preload_data = preload_data
 
-        self.mash_folder_path = self.dataset_root_folder_path + "MashV3/"
-        self.split_folder_path = self.dataset_root_folder_path + "SplitAutoEncoder/"
+        self.mash_folder_path = self.dataset_root_folder_path + "MashV4/"
+        self.split_folder_path = self.dataset_root_folder_path + "SplitMashOCCDecoder/"
         assert os.path.exists(self.mash_folder_path)
         assert os.path.exists(self.split_folder_path)
 
@@ -101,8 +101,8 @@ class MashDataset(Dataset):
         sh_params = mash_params["sh_params"]
 
         if self.split == "train":
-            scale_range = [0.5, 2.0]
-            move_range = [-0.6, 0.6]
+            scale_range = [0.9, 1.1]
+            move_range = [-0.1, 0.1]
 
             random_scale = (
                 scale_range[0] + (scale_range[1] - scale_range[0]) * np.random.rand()

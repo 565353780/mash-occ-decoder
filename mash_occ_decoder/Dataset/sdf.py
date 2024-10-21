@@ -17,7 +17,7 @@ class SDFDataset(Dataset):
         self.split = split
         self.n_qry = n_qry
 
-        self.mash_folder_path = self.dataset_root_folder_path + "MashV3/"
+        self.mash_folder_path = self.dataset_root_folder_path + "MashV4/"
         assert os.path.exists(self.mash_folder_path)
 
         self.sdf_folder_path_list = []
@@ -117,24 +117,36 @@ class SDFDataset(Dataset):
         mask_params = mash_params["mask_params"]
         sh_params = mash_params["sh_params"]
 
-        scale_range = [0.5, 2.0]
-        move_range = [-0.6, 0.6]
+        if self.split == "train":
+            scale_range = [0.9, 1.1]
+            move_range = [-0.1, 0.1]
 
-        random_scale = (
-            scale_range[0] + (scale_range[1] - scale_range[0]) * np.random.rand()
-        )
-        random_translate = move_range[0] + (
-            move_range[1] - move_range[0]
-        ) * np.random.rand(3)
+            random_scale = (
+                scale_range[0] + (scale_range[1] - scale_range[0]) * np.random.rand()
+            )
+            random_translate = move_range[0] + (
+                move_range[1] - move_range[0]
+            ) * np.random.rand(3)
 
-        mash_params = np.hstack(
-            [
-                rotate_vectors,
-                positions * random_scale + random_translate,
-                mask_params,
-                sh_params * random_scale,
-            ]
-        )
+            mash_params = np.hstack(
+                [
+                    rotate_vectors,
+                    positions * random_scale + random_translate,
+                    mask_params,
+                    sh_params * random_scale,
+                ]
+            )
+        else:
+            random_scale = 1.0
+            random_translate = np.zeros(3)
+            mash_params = np.hstack(
+                [
+                    rotate_vectors,
+                    positions,
+                    mask_params,
+                    sh_params,
+                ]
+            )
 
         points = sdf_data[:, :3]
         sdf = sdf_data[:, 3]

@@ -3,7 +3,7 @@ from torch import nn
 from functools import partial
 
 try:
-    from mamba_ssm.ops.triton.layernorm import RMSNorm, layer_norm_fn, rms_norm_fn
+    from mamba_ssm.ops.triton.layer_norm import RMSNorm, layer_norm_fn, rms_norm_fn
 except ImportError:
     RMSNorm, layer_norm_fn, rms_norm_fn = None, None, None
 
@@ -34,6 +34,19 @@ class MashDecoder(nn.Module):
     ) -> None:
         factory_kwargs = {"device": device, "dtype": dtype}
         super().__init__()
+
+        d_intermediate = 0
+        mamba_version = 1
+        if mamba_version == 1:
+            ssm_cfg = {
+                'layer': 'Mamba1',
+            }
+        else:
+            ssm_cfg = {
+                'layer': 'Mamba2',
+                'headdim': 1,
+            }
+
         self.residual_in_fp32 = residual_in_fp32
 
         self.mask_dim = 2 * mask_degree + 1
@@ -64,6 +77,7 @@ class MashDecoder(nn.Module):
             [
                 create_block(
                     self.anchor_dim,
+                    d_intermediate=d_intermediate,
                     ssm_cfg=ssm_cfg,
                     norm_epsilon=norm_epsilon,
                     rms_norm=rms_norm,

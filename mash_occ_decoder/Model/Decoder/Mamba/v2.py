@@ -2,7 +2,7 @@ import torch
 from torch import nn
 from functools import partial
 
-from mamba_ssm.ops.triton.layernorm import RMSNorm, layer_norm_fn, rms_norm_fn
+from mamba_ssm.ops.triton.layer_norm import RMSNorm, layer_norm_fn, rms_norm_fn
 
 from mash_occ_decoder.Model.mamba_block import create_block, init_weights
 from mash_occ_decoder.Model.Layer.pre_norm import PreNorm
@@ -31,6 +31,19 @@ class MashDecoder(nn.Module):
     ) -> None:
         factory_kwargs = {"device": device, "dtype": dtype}
         super().__init__()
+
+        d_intermediate = 0
+        mamba_version = 2
+        if mamba_version == 1:
+            ssm_cfg = {
+                'layer': 'Mamba1',
+            }
+        else:
+            ssm_cfg = {
+                'layer': 'Mamba2',
+                'headdim': 100,
+            }
+
         self.residual_in_fp32 = residual_in_fp32
         self.fused_add_norm = fused_add_norm
 
@@ -49,6 +62,7 @@ class MashDecoder(nn.Module):
             [
                 create_block(
                     d_hidden,
+                    d_intermediate=d_intermediate,
                     ssm_cfg=ssm_cfg,
                     norm_epsilon=norm_epsilon,
                     rms_norm=rms_norm,
@@ -80,6 +94,7 @@ class MashDecoder(nn.Module):
                 init_weights,
                 n_layer=n_layer,
                 **(initializer_cfg if initializer_cfg is not None else {}),
+                n_residuals_per_layer=1 if d_intermediate == 0 else 2,
             )
         )
         return
