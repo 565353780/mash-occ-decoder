@@ -1,8 +1,13 @@
+import sys
+sys.path.append('../ma-sh/')
+
 import os
 import torch
 import numpy as np
 from tqdm import tqdm
 from torch.utils.data import Dataset
+
+from ma_sh.Model.mash import Mash
 
 
 class SDFDataset(Dataset):
@@ -117,38 +122,14 @@ class SDFDataset(Dataset):
         mask_params = mash_params["mask_params"]
         sh_params = mash_params["sh_params"]
 
-        if self.split == "train":
-            scale_range = [0.9, 1.1]
-            move_range = [-0.1, 0.1]
+        permute_idxs = np.random.permutation(rotate_vectors.shape[0])
 
-            random_scale = (
-                scale_range[0] + (scale_range[1] - scale_range[0]) * np.random.rand()
-            )
-            random_translate = move_range[0] + (
-                move_range[1] - move_range[0]
-            ) * np.random.rand(3)
+        rotate_vectors = rotate_vectors[permute_idxs]
+        positions = positions[permute_idxs]
+        mask_params = mask_params[permute_idxs]
+        sh_params = sh_params[permute_idxs]
 
-            mash_params = np.hstack(
-                [
-                    rotate_vectors,
-                    positions * random_scale + random_translate,
-                    mask_params,
-                    sh_params * random_scale,
-                ]
-            )
-        else:
-            random_scale = 1.0
-            random_translate = np.zeros(3)
-            mash_params = np.hstack(
-                [
-                    rotate_vectors,
-                    positions,
-                    mask_params,
-                    sh_params,
-                ]
-            )
-
-        points = sdf_data[:, :3]
+        qry = sdf_data[:, :3]
         sdf = sdf_data[:, 3]
 
         positive_sdf_idxs = np.where(sdf_data[:, 3] <= 0.0)[0]
@@ -174,13 +155,37 @@ class SDFDataset(Dataset):
 
         perm = idxs[np.random.permutation(positive_sdf_num + negative_sdf_num)]
 
-        qry = points[perm] * random_scale + random_translate
+        qry = qry[perm]
         occ = occ[perm]
-        mash_params = mash_params[np.random.permutation(mash_params.shape[0])]
+
+        if self.split == "train":
+            scale_range = [0.9, 1.1]
+            move_range = [-0.1, 0.1]
+
+            random_scale = (
+                scale_range[0] + (scale_range[1] - scale_range[0]) * np.random.rand()
+            )
+            random_translate = move_range[0] + (
+                move_range[1] - move_range[0]
+            ) * np.random.rand(3)
+
+            positions = positions * random_scale + random_translate
+            sh_params = sh_params * random_scale
+            qry = qry * random_scale + random_translate
+
+        mash = Mash(400, 3, 2, 0, 1, 1.0, True, torch.int64, torch.float64, 'cpu')
+        mash.loadParams(mask_params, sh_params, rotate_vectors, positions)
+
+        ortho_poses_tensor = mash.toOrtho6DPoses().float()
+        positions_tensor = torch.tensor(positions).float()
+        mask_params_tesnor = torch.tensor(mask_params).float()
+        sh_params_tensor = torch.tensor(sh_params).float()
+
+        mash_params = torch.cat((ortho_poses_tensor, positions_tensor, mask_params_tesnor, sh_params_tensor), dim=1)
 
         feed_dict = {
+            "mash_params": mash_params,
             "qry": torch.tensor(qry).float(),
-            "mash_params": torch.tensor(mash_params).float(),
             "occ": torch.tensor(occ).float(),
         }
 
