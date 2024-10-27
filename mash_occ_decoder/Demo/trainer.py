@@ -11,18 +11,18 @@ def demo():
     num_workers = 4
     n_qry = 8000
     noise_label_list = ["0_25", "0_025", "0_0025"]
-    model_file_path = "./output/t-v3-2/model_last.pth"
+    model_file_path = "./output/mamba2-v1-1/model_last.pth"
     model_file_path = None
     dtype = torch.float32
     device = "cuda:0"
     warm_epoch_step_num = 100
     warm_epoch_num = 0
     finetune_step_num = 100000000
-    lr = 3e-5
+    lr = 1e-5
     weight_decay = 1e-10
     factor = 0.99
     patience = 10000
-    min_lr = 1e-6
+    min_lr = 1e-7
     save_result_folder_path = "auto"
     save_log_folder_path = "auto"
 
