@@ -13,7 +13,7 @@ from torch.optim.lr_scheduler import (
 
 from mash_occ_decoder.Dataset.sdf import SDFDataset
 from mash_occ_decoder.Method.time import getCurrentTime
-from mash_occ_decoder.Method.path import createFileFolder
+from mash_occ_decoder.Method.path import createFileFolder, removeFile, renameFile
 from mash_occ_decoder.Model.mash_decoder import MashDecoder
 from mash_occ_decoder.Module.logger import Logger
 
@@ -394,7 +394,12 @@ class Trainer(object):
 
         save_last_model_file_path = self.save_result_folder_path + "model_last.pth"
 
-        self.saveModel(save_last_model_file_path)
+        tmp_save_last_model_file_path = save_last_model_file_path[:-4] + "_tmp.pth"
+
+        self.saveModel(tmp_save_last_model_file_path)
+
+        removeFile(save_last_model_file_path)
+        renameFile(tmp_save_last_model_file_path, save_last_model_file_path)
 
         if self.loss_min == float("inf"):
             if not check_lower:
@@ -411,6 +416,11 @@ class Trainer(object):
 
         save_best_model_file_path = self.save_result_folder_path + "model_best.pth"
 
-        self.saveModel(save_best_model_file_path)
+        tmp_save_best_model_file_path = save_best_model_file_path[:-4] + "_tmp.pth"
+
+        self.saveModel(tmp_save_best_model_file_path)
+
+        removeFile(save_best_model_file_path)
+        renameFile(tmp_save_best_model_file_path, save_best_model_file_path)
 
         return True

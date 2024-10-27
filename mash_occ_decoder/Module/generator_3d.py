@@ -1,3 +1,6 @@
+import sys
+sys.path.append('../ma-sh/')
+
 import time
 import math
 import torch
@@ -7,6 +10,8 @@ import torch.optim as optim
 
 from torch import autograd
 from tqdm import trange, tqdm
+
+from ma_sh.Model.mash import Mash
 
 from mash_occ_decoder.Lib import libmcubes
 from mash_occ_decoder.Lib.libmise import MISE
@@ -85,7 +90,12 @@ class Generator3D(object):
         mask_params = mash_params["mask_params"]
         sh_params = mash_params["sh_params"]
 
-        params = np.hstack([rotate_vectors, positions, mask_params, sh_params])
+        mash = Mash(400, 3, 2, 0, 1, 1.0, True, torch.int64, torch.float64, 'cpu')
+        mash.loadParams(mask_params, sh_params, rotate_vectors, positions)
+
+        ortho_poses = mash.toOrtho6DPoses().float().numpy()
+
+        params = np.hstack([ortho_poses, positions, mask_params, sh_params])
 
         q_ftrs = (
             torch.from_numpy(params).type(qry_pts.dtype).to(qry_pts.device).unsqueeze(0)
