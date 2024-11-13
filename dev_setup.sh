@@ -7,7 +7,7 @@ elif [ "$(uname)" = "Linux" ]; then
   pip install -U open3d
 fi
 
-pip install -U trimesh tensorboard Cython pykdtree timm einops
+pip install -U trimesh tensorboard Cython pykdtree timm einops scikit-image
 pip install -U causal-conv1d
 pip install -U mamba-ssm
 
