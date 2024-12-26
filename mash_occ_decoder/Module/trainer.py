@@ -424,11 +424,11 @@ class Trainer(object):
             elif value < self.loss_min:
                 return False
 
+            self.loss_min = value
+
         save_model_file_path = self.save_result_folder_path + "model_" + name + ".pth"
 
         tmp_save_model_file_path = save_model_file_path[:-4] + "_tmp.pth"
-
-        self.loss_min = value
 
         self.saveModel(tmp_save_model_file_path)
 
