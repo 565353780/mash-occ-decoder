@@ -6,6 +6,7 @@ from mash_occ_decoder.Model.Layer.feed_forward import FeedForward
 from mash_occ_decoder.Model.Layer.attention import Attention
 from mash_occ_decoder.Model.Layer.point_embed import PointEmbed
 from mash_occ_decoder.Method.cache import cache_fn
+from mash_occ_decoder.Module.diagonal_gaussian_distribution import DiagonalGaussianDistribution
 
 
 class MashDecoder(nn.Module):
@@ -55,11 +56,28 @@ class MashDecoder(nn.Module):
         self.decoder_ff = PreNorm(queries_dim, FeedForward(queries_dim))
 
         self.to_outputs = nn.Linear(queries_dim, output_dim)
+
+        self.proj = nn.Linear(latent_dim, dim)
+
+        self.mean_fc = nn.Linear(dim, latent_dim)
+        self.logvar_fc = nn.Linear(dim, latent_dim)
         return
 
-    def forward(self, data_dict):
-        x = data_dict["mash_params"]
-        queries = data_dict["qry"]
+    def forward(self, data: dict, drop_prob: float = 0.0, deterministic: bool=False):
+        mash_params = data["mash_params"]
+        queries = data["qry"]
+
+        if drop_prob > 0.0:
+            mask = mash_params.new_empty(*mash_params.shape[:2])
+            mask = mask.bernoulli_(1 - drop_prob)
+            mash_params = mash_params * mask.unsqueeze(-1).expand_as(mash_params).type(mash_params.dtype)
+
+        mean = self.mean_fc(mash_params)
+        logvar = self.logvar_fc(mash_params)
+
+        posterior = DiagonalGaussianDistribution(mean, logvar, deterministic)
+        x = posterior.sample()
+        kl = posterior.kl()
 
         for self_attn, self_ff in self.layers:
             x = self_attn(x) + x
@@ -71,4 +89,5 @@ class MashDecoder(nn.Module):
         latents = latents + self.decoder_ff(latents)
 
         occ = self.to_outputs(latents).squeeze(-1)
-        return occ
+
+        return occ, kl

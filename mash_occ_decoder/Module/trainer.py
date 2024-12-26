@@ -1,47 +1,35 @@
 import os
 import torch
+import torch.distributed as dist
 from torch import nn
 from tqdm import tqdm
 from typing import Union
+from torch.optim.adamw import AdamW
 from torch.utils.data import DataLoader
-from torch.optim import Optimizer, AdamW
-from torch.optim.lr_scheduler import (
-    LRScheduler,
-    CosineAnnealingWarmRestarts,
-    ReduceLROnPlateau,
-)
+from torch.optim.lr_scheduler import LambdaLR
+from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.utils.data import DataLoader, DistributedSampler
 
 from mash_occ_decoder.Dataset.sdf import SDFDataset
 from mash_occ_decoder.Method.time import getCurrentTime
 from mash_occ_decoder.Method.path import createFileFolder, removeFile, renameFile
+from mash_occ_decoder.Metric.occ import cal_occ_positive_percent, cal_occ_acc
 from mash_occ_decoder.Model.mash_decoder import MashDecoder
 from mash_occ_decoder.Module.logger import Logger
 
 
-def cal_occ_acc(occ, gt_occ):
-    positive_acc_num = torch.where((occ.sigmoid() > 0.5) & (gt_occ > 0.5))[0].shape[0]
-    negative_acc_num = torch.where((occ.sigmoid() < 0.5) & (gt_occ < 0.5))[0].shape[0]
+def setup_distributed():
+    dist.init_process_group(backend="nccl")
+    local_rank = int(os.environ["LOCAL_RANK"])
+    torch.cuda.set_device(local_rank)
+    return local_rank
 
-    occ_num = 1
-    for size in gt_occ.shape:
-        occ_num *= size
-
-    acc = (positive_acc_num + negative_acc_num) / occ_num
-    return acc
-
-
-def cal_sdf_acc(sdf, gt_occ):
-    occ = torch.ones_like(sdf)
-    occ[sdf > 0.0] = 0.0
-    positive_acc_num = torch.where((occ > 0.5) & (gt_occ > 0.5))[0].shape[0]
-    negative_acc_num = torch.where((occ < 0.5) & (gt_occ < 0.5))[0].shape[0]
-
-    occ_num = 1
-    for size in gt_occ.shape:
-        occ_num *= size
-
-    acc = (positive_acc_num + negative_acc_num) / occ_num
-    return acc
+def check_and_replace_nan_in_grad(model):
+    for name, param in model.named_parameters():
+        if param.grad is not None and torch.isnan(param.grad).any():
+            print(f"NaN detected in gradient: {name}")
+            param.grad = torch.where(torch.isnan(param.grad), torch.zeros_like(param.grad), param.grad)
+    return True
 
 
 class Trainer(object):
@@ -54,71 +42,99 @@ class Trainer(object):
         n_qry: int = 200,
         noise_label_list: list = ["0_25"],
         model_file_path: Union[str, None] = None,
-        dtype=torch.float64,
-        device: str = "cpu",
-        warm_epoch_step_num: int = 20,
-        warm_epoch_num: int = 10,
-        finetune_step_num: int = 400,
+        dtype=torch.float32,
+        device: str = "auto",
+        warm_step_num: int = 2000,
+        finetune_step_num: int = -1,
         lr: float = 1e-2,
-        weight_decay: float = 1e-4,
-        factor: float = 0.9,
-        patience: int = 1,
-        min_lr: float = 1e-4,
+        drop_prob: float = 0.75,
+        kl_weight: float = 1.0,
         save_result_folder_path: Union[str, None] = None,
         save_log_folder_path: Union[str, None] = None,
     ) -> None:
+        self.local_rank = setup_distributed()
+
         self.accum_iter = accum_iter
         self.dtype = dtype
-        self.device = device
+        if device == 'auto':
+            self.device = torch.device('cuda:' + str(self.local_rank))
+        else:
+            self.device = device
 
-        self.warm_epoch_step_num = warm_epoch_step_num
-        self.warm_epoch_num = warm_epoch_num
-
+        self.warm_step_num = warm_step_num / accum_iter
         self.finetune_step_num = finetune_step_num
-
-        self.step = 0
-        self.loss_min = float("inf")
-
-        self.best_params_dict = {}
-
-        self.lr = lr
-        self.weight_decay = weight_decay
-        self.factor = factor
-        self.patience = patience
-        self.min_lr = min_lr
+        self.lr = lr * batch_size / 256 * self.accum_iter * dist.get_world_size()
+        self.drop_prob = drop_prob
+        self.loss_kl_weight = kl_weight
 
         self.save_result_folder_path = save_result_folder_path
         self.save_log_folder_path = save_log_folder_path
-        self.save_file_idx = 0
-        self.logger = Logger()
 
-        self.train_loader = DataLoader(
-            SDFDataset(dataset_root_folder_path, "train", n_qry, noise_label_list),
-            shuffle=True,
-            batch_size=batch_size,
-            num_workers=num_workers,
-        )
-        self.val_loader = DataLoader(
-            SDFDataset(dataset_root_folder_path, "val", n_qry, noise_label_list),
-            shuffle=False,
-            batch_size=batch_size,
-            num_workers=num_workers,
-        )
+        self.step = 0
+        self.epoch = 0
+        self.loss_dict_list = []
+        self.loss_min = float("inf")
 
-        self.model = MashDecoder(dtype=self.dtype, device=self.device).to(self.device)
+        self.logger = None
+        if self.local_rank == 0:
+            self.logger = Logger()
+
+        self.dataloader_dict = {}
+
+        if True:
+            self.dataloader_dict['mash'] =  {
+                'dataset': SDFDataset(dataset_root_folder_path, 'train', n_qry, noise_label_list),
+                'repeat_num': 1,
+            }
+
+        if True:
+            self.dataloader_dict['eval'] =  {
+                'dataset': SDFDataset(dataset_root_folder_path, 'val', n_qry, noise_label_list),
+            }
+
+        for key, item in self.dataloader_dict.items():
+            if key == 'eval':
+                self.dataloader_dict[key]['dataloader'] = DataLoader(
+                    item['dataset'],
+                    batch_size=batch_size,
+                    num_workers=num_workers,
+                )
+                continue
+
+            self.dataloader_dict[key]['sampler'] = DistributedSampler(item['dataset'])
+            self.dataloader_dict[key]['dataloader'] = DataLoader(
+                item['dataset'],
+                sampler=self.dataloader_dict[key]['sampler'],
+                batch_size=batch_size,
+                num_workers=num_workers,
+            )
+
+
+        self.model = MashDecoder(
+            dtype=self.dtype,
+            device=self.device,
+        ).to(self.device)
+
+        self.model = DDP(self.model, device_ids=[self.local_rank], output_device=self.local_rank)
+
+        if model_file_path is not None:
+            self.loadModel(model_file_path)
+
+        self.optim = AdamW(self.model.parameters(), lr=self.lr)
+        self.sched = LambdaLR(self.optim, lr_lambda=self.warmup_lr)
 
         self.loss_fn = nn.BCEWithLogitsLoss()
 
         self.initRecords()
 
-        if model_file_path is not None:
-            self.loadModel(model_file_path)
-
         self.min_lr_reach_time = 0
+
+        self.gt_sample_added_to_logger = False
         return
 
     def initRecords(self) -> bool:
-        self.save_file_idx = 0
+        if self.logger is None:
+            return True
 
         current_time = getCurrentTime()
 
@@ -142,90 +158,182 @@ class Trainer(object):
             return False
 
         model_state_dict = torch.load(model_file_path)
-        self.model.load_state_dict(model_state_dict["model"])
+        if 'model' in model_state_dict.keys():
+            self.model.module.load_state_dict(model_state_dict["model"])
+        if 'step' in model_state_dict.keys():
+            self.step = model_state_dict['step']
+        if 'loss_min' in model_state_dict.keys():
+            self.loss_min = model_state_dict['loss_min']
+
+        print('[INFO][Trainer::loadModel]')
+        print('\t model loaded from:', model_file_path)
+
         return True
 
-    def getLr(self, optimizer) -> float:
-        return optimizer.state_dict()["param_groups"][0]["lr"]
+    def getLr(self) -> float:
+        return self.optim.state_dict()["param_groups"][0]["lr"]
 
-    def toTrainStepNum(self, scheduler: LRScheduler) -> int:
-        if not isinstance(scheduler, CosineAnnealingWarmRestarts):
-            return self.finetune_step_num
+    def warmup_lr(self, step: int) -> float:
+        if self.warm_step_num == 0:
+            return 1.0
 
-        if scheduler.T_mult == 1:
-            warm_epoch_num = scheduler.T_0 * self.warm_epoch_num
-        else:
-            warm_epoch_num = int(
-                scheduler.T_mult
-                * (1.0 - pow(scheduler.T_mult, self.warm_epoch_num))
-                / (1.0 - scheduler.T_mult)
-            )
-
-        return self.warm_epoch_step_num * warm_epoch_num
+        return min(step, self.warm_step_num) / self.warm_step_num
 
     def trainStep(
         self,
         data: dict,
-        optimizer: Optimizer,
     ) -> dict:
+        self.model.train()
+
         for key in data.keys():
             data[key] = data[key].to(self.device)
 
         gt_occ = data["occ"]
 
-        occ = self.model(data)
+        occ, kl = self.model(data)
 
-        loss = self.loss_fn(occ, gt_occ)
+        loss_occ = self.loss_fn(occ, gt_occ)
+
+        loss_kl = torch.sum(kl) / kl.shape[0]
+        weighted_loss_kl = self.loss_kl_weight * loss_kl
+
+        loss = loss_occ + weighted_loss_kl
+
+        loss_item = loss.clone().detach().cpu().numpy()
 
         accum_loss = loss / self.accum_iter
+
         accum_loss.backward()
 
-        if (self.step + 1) % self.accum_iter == 0:
-            optimizer.step()
-            optimizer.zero_grad()
+        if not check_and_replace_nan_in_grad(self.model):
+            print('[ERROR][Trainer::trainStep]')
+            print('\t check_and_replace_nan_in_grad failed!')
+            exit()
 
-        with torch.no_grad():
-            acc = cal_occ_acc(occ, gt_occ)
+        if (self.step + 1) % self.accum_iter == 0:
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
+            self.optim.step()
+            self.sched.step()
+            self.optim.zero_grad()
+
+        acc = cal_occ_acc(occ, gt_occ)
+        positive_occ_percent = cal_occ_positive_percent(gt_occ)
 
         loss_dict = {
-            "Loss": loss.item(),
+            "LossOCC": loss_occ.clone().detach().cpu().numpy(),
+            "LossKL": loss_kl.clone().detach().cpu().numpy(),
+            "Loss": loss_item,
             "Accuracy": acc,
+            "PositiveOCC": positive_occ_percent,
         }
 
         return loss_dict
 
     @torch.no_grad()
-    def valStep(self) -> dict:
+    def evalStep(self, data: dict) -> dict:
+        self.model.eval()
+
+        for key in data.keys():
+            data[key] = data[key].to(self.device)
+
+        occ, _ = self.model.module(data, drop_prob=0.0, deterministic=True)
+
+        gt_occ = data["occ"]
+
+        loss = self.loss_fn(occ, gt_occ)
+
+        loss_item = loss.item()
+        acc = cal_occ_acc(occ, gt_occ)
+        positive_occ_percent = cal_occ_positive_percent(gt_occ)
+
+        loss_dict = {
+            'Loss': loss_item,
+            'Accuracy': acc,
+            'PositiveOCC': positive_occ_percent,
+        }
+
+        return loss_dict
+
+    def trainEpoch(self, data_name: str) -> bool:
+        if data_name not in self.dataloader_dict.keys():
+            print('[ERROR][Trainer::trainEpoch]')
+            print('\t data not exist!')
+            print('\t data_name:', data_name)
+            return False
+
+        dataloader_dict = self.dataloader_dict[data_name]
+        dataloader_dict['sampler'].set_epoch(self.epoch)
+
+        dataloader = dataloader_dict['dataloader']
+
+        if self.local_rank == 0:
+            pbar = tqdm(total=len(dataloader))
+        for data in dataloader:
+            train_loss_dict = self.trainStep(data)
+
+            self.loss_dict_list.append(train_loss_dict)
+
+            lr = self.getLr()
+
+            if (self.step + 1) % self.accum_iter == 0 and self.local_rank == 0:
+                for key in train_loss_dict.keys():
+                    value = 0
+                    for i in range(len(self.loss_dict_list)):
+                        value += self.loss_dict_list[i][key]
+                    value /= len(self.loss_dict_list)
+                    self.logger.addScalar("Train/" + key, value, self.step)
+                self.logger.addScalar("Train/Lr", lr, self.step)
+
+                self.loss_dict_list = []
+
+            if self.local_rank == 0:
+                pbar.set_description(
+                    "EPOCH %d LOSS %.6f LR %.4f"
+                    % (
+                        self.epoch,
+                        train_loss_dict["Loss"],
+                        self.getLr() / self.lr,
+                    )
+                )
+
+            self.step += 1
+
+            if self.local_rank == 0:
+                pbar.update(1)
+
+        if self.local_rank == 0:
+            pbar.close()
+
+        self.epoch += 1
+
+        return True
+
+    @torch.no_grad()
+    def evalEpoch(self) -> bool:
+        if self.local_rank != 0:
+            return True
+
+        if 'eval' not in self.dataloader_dict.keys():
+            return True
+
+        print('[INFO][Trainer::evalEpoch]')
+        print('\t start evaluating ...')
+
+        dataloader = self.dataloader_dict['eval']['dataloader']
+
         avg_loss = 0
         avg_acc = 0
         avg_positive_occ_percent = 0
         ni = 0
 
-        print("[INFO][Trainer::valStep]")
-        print("\t start val loss and acc...")
-        for data in tqdm(self.val_loader):
-            for key in data.keys():
-                data[key] = data[key].to(self.device)
+        print("[INFO][Trainer::evalEpoch]")
+        print("\t start eval loss and acc...")
+        for data in tqdm(dataloader, total=len(dataloader)):
+            loss_dict = self.evalStep(data)
 
-            occ = self.model(data)
-
-            gt_occ = data["occ"]
-
-            loss = self.loss_fn(occ, gt_occ)
-
-            acc = cal_occ_acc(occ, gt_occ)
-
-            avg_loss += loss.item()
-            avg_acc += acc
-
-            gt_occ_shape = gt_occ.shape
-            positive_occ_num = torch.where(gt_occ > 0.5)[0].shape[0]
-            occ_num = 1
-            for size in gt_occ_shape:
-                occ_num *= size
-
-            positive_occ_percent = 1.0 * positive_occ_num / occ_num
-            avg_positive_occ_percent += positive_occ_percent
+            avg_loss += loss_dict['Loss']
+            avg_acc += loss_dict['Accuracy']
+            avg_positive_occ_percent += loss_dict['PositiveOCC']
 
             ni += 1
 
@@ -233,146 +341,54 @@ class Trainer(object):
         avg_acc /= ni
         avg_positive_occ_percent /= ni
 
-        loss_dict = {
+        eval_loss_dict = {
             "Loss": avg_loss,
             "Accuracy": avg_acc,
             "PositiveOCC": avg_positive_occ_percent,
         }
 
-        return loss_dict
+        for key, item in eval_loss_dict.items():
+            self.logger.addScalar("Eval/" + key, item, self.step)
 
-    def checkStop(
-        self, optimizer: Optimizer, scheduler: LRScheduler, loss_dict: dict
-    ) -> bool:
-        if not isinstance(scheduler, CosineAnnealingWarmRestarts):
-            scheduler.step(loss_dict["Loss"])
-
-            if self.getLr(optimizer) == self.min_lr:
-                self.min_lr_reach_time += 1
-
-            return self.min_lr_reach_time > self.patience
-
-        current_warm_epoch = self.step / self.warm_epoch_step_num
-        scheduler.step(current_warm_epoch)
-
-        return current_warm_epoch >= self.warm_epoch_num
-
-    def train(
-        self,
-        optimizer: Optimizer,
-        scheduler: LRScheduler,
-    ) -> bool:
-        train_step_num = self.toTrainStepNum(scheduler)
-        final_step = self.step + train_step_num
-
-        eval_step = 0
-
-        print("[INFO][Trainer::train]")
-        print("\t start training ...")
-
-        loss_dict_list = []
-        while self.step < final_step:
-            self.model.train()
-
-            pbar = tqdm(total=len(self.train_loader))
-            for data in self.train_loader:
-                train_loss_dict = self.trainStep(data, optimizer)
-
-                loss_dict_list.append(train_loss_dict)
-
-                lr = self.getLr(optimizer)
-
-                if self.logger.isValid():
-                    if (self.step + 1) % self.accum_iter == 0:
-                        for key in train_loss_dict.keys():
-                            value = 0
-                            for i in range(len(loss_dict_list)):
-                                value += loss_dict_list[i][key]
-                            value /= len(loss_dict_list)
-                            self.logger.addScalar("Train/" + key, value, self.step)
-                        self.logger.addScalar("Train/Lr", lr, self.step)
-
-                        loss_dict_list = []
-
-                    gt_occ = data["occ"]
-                    occ_shape = gt_occ.shape
-                    positive_occ_num = torch.where(gt_occ > 0.5)[0].shape[0]
-                    occ_num = 1
-                    for size in occ_shape:
-                        occ_num *= size
-
-                    positive_occ_percent = 1.0 * positive_occ_num / occ_num
-                    self.logger.addScalar(
-                        "Train/PositiveOCC", positive_occ_percent, self.step
-                    )
-
-                pbar.set_description(
-                    "LOSS %.6f LR %.4f"
-                    % (
-                        train_loss_dict["Loss"],
-                        self.getLr(optimizer) / self.lr,
-                    )
-                )
-
-                self.step += 1
-                pbar.update(1)
-
-                if self.checkStop(optimizer, scheduler, train_loss_dict):
-                    break
-
-                if self.step >= final_step:
-                    break
-
-            eval_step += 1
-            if eval_step % 1 == 0:
-                print("[INFO][Trainer::train]")
-                print("\t start eval on val dataset...")
-                self.model.eval()
-                eval_loss_dict = self.valStep()
-
-                if self.logger.isValid():
-                    for key, item in eval_loss_dict.items():
-                        self.logger.addScalar("Eval/" + key, item, self.step)
-
-                print(
-                    " loss:",
-                    eval_loss_dict["Loss"],
-                    " acc:",
-                    eval_loss_dict["Accuracy"],
-                    " positive occ:",
-                    eval_loss_dict["PositiveOCC"],
-                )
-
-                self.autoSaveModel(eval_loss_dict["Accuracy"], False)
-
-            # self.autoSaveModel(train_loss_dict['Accuracy'], False)
+        self.autoSaveModel('best', eval_loss_dict["Accuracy"], False)
 
         return True
 
-    def autoTrain(
-        self,
-    ) -> bool:
-        print("[INFO][Trainer::autoTrain]")
-        print("\t start auto train mash occ decoder...")
+    def train(self) -> bool:
+        final_step = self.step + self.finetune_step_num
 
-        optimizer = AdamW(
-            self.model.parameters(),
-            lr=self.lr,
-            weight_decay=self.weight_decay,
-        )
-        warm_scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=1, T_mult=1)
-        finetune_scheduler = ReduceLROnPlateau(
-            optimizer,
-            mode="min",
-            factor=self.factor,
-            patience=self.patience,
-            min_lr=self.min_lr,
-        )
+        if self.local_rank == 0:
+            print("[INFO][Trainer::train]")
+            print("\t start training ...")
 
-        self.train(optimizer, warm_scheduler)
-        for param_group in optimizer.param_groups:
-            param_group["lr"] = self.lr
-        self.train(optimizer, finetune_scheduler)
+        while self.step < final_step or self.finetune_step_num < 0:
+
+            for data_name in self.dataloader_dict.keys():
+                if data_name == 'eval':
+                    continue
+
+                repeat_num = self.dataloader_dict[data_name]['repeat_num']
+
+                for i in range(repeat_num):
+                    if self.local_rank == 0:
+                        print('[INFO][Trainer::train]')
+                        print('\t start training on dataset [', data_name, '] ,', i + 1, '/', repeat_num, '...')
+
+                    if not self.trainEpoch(data_name):
+                        print('[ERROR][Trainer::train]')
+                        print('\t trainEpoch failed!')
+                        return False
+
+                    self.autoSaveModel("last")
+
+                    if not self.evalEpoch():
+                        print('[ERROR][Trainer::train]')
+                        print('\t evalEpoch failed!')
+                        return False
+
+                    if self.epoch % 1 == 0:
+                        #self.sampleStep()
+                        pass
 
         return True
 
@@ -381,6 +397,7 @@ class Trainer(object):
 
         model_state_dict = {
             "model": self.model.state_dict(),
+            "step": self.step,
             "loss_min": self.loss_min,
         }
 
@@ -388,39 +405,33 @@ class Trainer(object):
 
         return True
 
-    def autoSaveModel(self, value: float, check_lower: bool = True) -> bool:
+    def autoSaveModel(self, name: str, value: Union[float, None] = None, check_lower: bool = True) -> bool:
+        if self.local_rank != 0:
+            return True
+
         if self.save_result_folder_path is None:
             return False
 
-        save_last_model_file_path = self.save_result_folder_path + "model_last.pth"
+        if value is not None:
+            if self.loss_min == float("inf"):
+                if not check_lower:
+                    self.loss_min = -float("inf")
 
-        tmp_save_last_model_file_path = save_last_model_file_path[:-4] + "_tmp.pth"
-
-        self.saveModel(tmp_save_last_model_file_path)
-
-        removeFile(save_last_model_file_path)
-        renameFile(tmp_save_last_model_file_path, save_last_model_file_path)
-
-        if self.loss_min == float("inf"):
-            if not check_lower:
-                self.loss_min = -float("inf")
-
-        if check_lower:
-            if value > self.loss_min:
+            if check_lower:
+                if value > self.loss_min:
+                    return False
+            elif value < self.loss_min:
                 return False
-        else:
-            if value < self.loss_min:
-                return False
+
+        save_model_file_path = self.save_result_folder_path + "model_" + name + ".pth"
+
+        tmp_save_model_file_path = save_model_file_path[:-4] + "_tmp.pth"
 
         self.loss_min = value
 
-        save_best_model_file_path = self.save_result_folder_path + "model_best.pth"
+        self.saveModel(tmp_save_model_file_path)
 
-        tmp_save_best_model_file_path = save_best_model_file_path[:-4] + "_tmp.pth"
-
-        self.saveModel(tmp_save_best_model_file_path)
-
-        removeFile(save_best_model_file_path)
-        renameFile(tmp_save_best_model_file_path, save_best_model_file_path)
+        removeFile(save_model_file_path)
+        renameFile(tmp_save_model_file_path, save_model_file_path)
 
         return True

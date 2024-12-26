@@ -11,8 +11,8 @@ from mash_occ_decoder.Method.cache import cache_fn
 class MashDecoder(nn.Module):
     def __init__(
         self,
-        mask_degree: int = 4,
-        sh_degree: int = 3,
+        mask_degree: int = 3,
+        sh_degree: int = 2,
         depth: int = 24,
         hidden_dim: int = 400,
         hidden_embed_dim: int = 100,
