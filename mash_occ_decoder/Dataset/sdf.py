@@ -1,13 +1,11 @@
-import sys
-sys.path.append('../ma-sh/')
-
 import os
 import torch
 import numpy as np
-from tqdm import tqdm
 from torch.utils.data import Dataset
 
-from ma_sh.Model.mash import Mash
+from ma_sh.Method.io import loadMashFileParamsTensor
+
+from mash_occ_decoder.Config.transformer import getTransformer
 
 
 class SDFDataset(Dataset):
@@ -16,97 +14,67 @@ class SDFDataset(Dataset):
         dataset_root_folder_path: str,
         split: str = "train",
         n_qry: int = 200,
-        noise_label_list: list = ["0_25"],
+        noise_label: str = "0_25",
+        train_percent: float = 0.9,
     ) -> None:
         self.dataset_root_folder_path = dataset_root_folder_path
         self.split = split
         self.n_qry = n_qry
 
-        self.mash_folder_path = self.dataset_root_folder_path + "MashV4/"
+        self.mash_folder_path = self.dataset_root_folder_path + "Objaverse_82K/manifold_mash/"
         assert os.path.exists(self.mash_folder_path)
 
-        self.sdf_folder_path_list = []
-        self.split_folder_path_list = []
-        for noise_label in noise_label_list:
-            sdf_folder_path = (
-                self.dataset_root_folder_path + "SampledSDF_" + noise_label + "/"
-            )
-            split_folder_path = (
-                self.dataset_root_folder_path + "MashOCCSplit_" + noise_label + "/"
-            )
-            assert os.path.exists(sdf_folder_path)
-            assert os.path.exists(split_folder_path)
-
-            self.sdf_folder_path_list.append(sdf_folder_path)
-            self.split_folder_path_list.append(split_folder_path)
+        self.sdf_folder_path = (
+            self.dataset_root_folder_path + "Objaverse_82K/manifold_sdf_" + noise_label + "/"
+        )
+        assert os.path.exists(self.sdf_folder_path)
 
         self.paths_list = []
 
-        for i in range(len(self.sdf_folder_path_list)):
-            split_folder_path = self.split_folder_path_list[i]
-            sdf_folder_path = self.sdf_folder_path_list[i]
+        print("[INFO][SDFDataset::__init__]")
+        print("\t start load dataset:", self.mash_folder_path)
+        for root, _, files in os.walk(self.mash_folder_path):
 
-            dataset_name_list = os.listdir(split_folder_path)
+            for file in files:
+                if not file.endswith('.npy'):
+                    continue
 
-            for dataset_name in dataset_name_list:
-                sdf_split_folder_path = split_folder_path + dataset_name + "/"
+                rel_file_basepath = os.path.relpath(root, self.mash_folder_path) + '/' + file[:-4]
 
-                categories = os.listdir(sdf_split_folder_path)
-                # FIXME: for detect test only
-                if self.split == "test":
-                    # categories = ["02691156"]
-                    categories = ["03001627"]
+                mash_file_path = self.mash_folder_path + rel_file_basepath + '.npy'
+                assert os.path.exists(mash_file_path)
 
-                for j, category in enumerate(categories):
-                    modelid_list_file_path = (
-                        sdf_split_folder_path + category + "/" + self.split + ".txt"
-                    )
-                    if not os.path.exists(modelid_list_file_path):
-                        continue
+                sdf_file_path = self.sdf_folder_path + rel_file_basepath + '.npy'
+                if not os.path.exists(sdf_file_path):
+                    continue
 
-                    with open(modelid_list_file_path, "r") as f:
-                        modelid_list = f.read().split()
+                self.paths_list.append([mash_file_path, sdf_file_path])
 
-                    print("[INFO][SDFDataset::__init__]")
-                    print(
-                        "\t start load dataset: "
-                        + dataset_name
-                        + "["
-                        + category
-                        + "], "
-                        + str(j + 1)
-                        + "/"
-                        + str(len(categories))
-                        + "..."
-                    )
-                    for modelid in tqdm(modelid_list):
-                        mash_file_path = (
-                            self.mash_folder_path
-                            + dataset_name
-                            + "/"
-                            + category
-                            + "/"
-                            + modelid
-                            + ".npy"
-                        )
+        self.paths_list.sort(key=lambda x: x[0])
 
-                        sdf_file_path = (
-                            sdf_folder_path
-                            + dataset_name
-                            + "/"
-                            + category
-                            + "/"
-                            + modelid
-                            + ".npy"
-                        )
+        train_data_num = max(int(len(self.paths_list) * train_percent), 1)
 
-                        self.paths_list.append([mash_file_path, sdf_file_path])
+        if self.split == 'train':
+            self.paths_list = self.paths_list[:train_data_num]
+        else:
+            self.paths_list = self.paths_list[train_data_num:]
+
+        self.transformer = getTransformer('Objaverse_82K')
+        assert self.transformer is not None
         return
+
+    def normalize(self, mash_params: torch.Tensor) -> torch.Tensor:
+        return self.transformer.transform(mash_params, False)
+
+    def normalizeInverse(self, mash_params: torch.Tensor) -> torch.Tensor:
+        return self.transformer.inverse_transform(mash_params, False)
 
     def __len__(self):
         return len(self.paths_list)
 
     def __getitem__(self, index):
+        index = index % len(self.paths_list)
+
         if self.split == "train":
             np.random.seed()
         else:
@@ -114,20 +82,15 @@ class SDFDataset(Dataset):
 
         mash_file_path, sdf_file_path = self.paths_list[index]
 
-        mash_params = np.load(mash_file_path, allow_pickle=True).item()
+        mash_params = loadMashFileParamsTensor(mash_file_path, torch.float32, 'cpu')
+
+        mash_params = self.normalize(mash_params)
+
+        permute_idxs = np.random.permutation(mash_params.shape[0])
+
+        mash_params = mash_params[permute_idxs]
+
         sdf_data = np.load(sdf_file_path)
-
-        rotate_vectors = mash_params["rotate_vectors"]
-        positions = mash_params["positions"]
-        mask_params = mash_params["mask_params"]
-        sh_params = mash_params["sh_params"]
-
-        permute_idxs = np.random.permutation(rotate_vectors.shape[0])
-
-        rotate_vectors = rotate_vectors[permute_idxs]
-        positions = positions[permute_idxs]
-        mask_params = mask_params[permute_idxs]
-        sh_params = sh_params[permute_idxs]
 
         qry = sdf_data[:, :3]
         sdf = sdf_data[:, 3]
@@ -157,31 +120,6 @@ class SDFDataset(Dataset):
 
         qry = qry[perm]
         occ = occ[perm]
-
-        if self.split == "train":
-            scale_range = [0.9, 1.1]
-            move_range = [-0.1, 0.1]
-
-            random_scale = (
-                scale_range[0] + (scale_range[1] - scale_range[0]) * np.random.rand()
-            )
-            random_translate = move_range[0] + (
-                move_range[1] - move_range[0]
-            ) * np.random.rand(3)
-
-            positions = positions * random_scale + random_translate
-            sh_params = sh_params * random_scale
-            qry = qry * random_scale + random_translate
-
-        mash = Mash(400, 3, 2, 0, 1, 1.0, True, torch.int64, torch.float64, 'cpu')
-        mash.loadParams(mask_params, sh_params, rotate_vectors, positions)
-
-        ortho_poses_tensor = mash.toOrtho6DPoses().float()
-        positions_tensor = torch.tensor(positions).float()
-        mask_params_tesnor = torch.tensor(mask_params).float()
-        sh_params_tensor = torch.tensor(sh_params).float()
-
-        mash_params = torch.cat((ortho_poses_tensor, positions_tensor, mask_params_tesnor, sh_params_tensor), dim=1)
 
         feed_dict = {
             "mash_params": mash_params,

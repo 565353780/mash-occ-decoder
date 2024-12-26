@@ -13,11 +13,12 @@ class MashDecoder(nn.Module):
     def __init__(
         self,
         depth=24,
-        dim=512,
+        dim=25,
         queries_dim=512,
         output_dim=1,
         heads=8,
         dim_head=64,
+        latent_dim: int = 25,
         weight_tie_layers=False,
         dtype=torch.float32,
         device: str = "cpu",
@@ -57,10 +58,10 @@ class MashDecoder(nn.Module):
 
         self.to_outputs = nn.Linear(queries_dim, output_dim)
 
-        self.proj = nn.Linear(latent_dim, dim)
-
         self.mean_fc = nn.Linear(dim, latent_dim)
         self.logvar_fc = nn.Linear(dim, latent_dim)
+
+        self.proj = nn.Linear(latent_dim, dim)
         return
 
     def forward(self, data: dict, drop_prob: float = 0.0, deterministic: bool=False):
@@ -78,6 +79,8 @@ class MashDecoder(nn.Module):
         posterior = DiagonalGaussianDistribution(mean, logvar, deterministic)
         x = posterior.sample()
         kl = posterior.kl()
+
+        x = self.proj(x)
 
         for self_attn, self_ff in self.layers:
             x = self_attn(x) + x

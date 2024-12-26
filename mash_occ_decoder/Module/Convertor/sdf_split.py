@@ -8,9 +8,9 @@ class Convertor(object):
     def __init__(self, dataset_root_folder_path: str, noise_label: str) -> None:
         self.dataset_root_folder_path = dataset_root_folder_path
 
-        self.mash_folder_path = self.dataset_root_folder_path + "MashV4/"
+        self.mash_folder_path = self.dataset_root_folder_path + "Objaverse_82K/manifold_mash/"
         self.sdf_folder_path = (
-            self.dataset_root_folder_path + "SampledSDF_" + noise_label + "/"
+            self.dataset_root_folder_path + "Objaverse_82K/manifold_sdf_" + noise_label + "/"
         )
         self.split_folder_path = (
             self.dataset_root_folder_path + "MashOCCSplit_" + noise_label + "/"
@@ -21,9 +21,9 @@ class Convertor(object):
 
         return
 
-    def toCategoryModelIdList(self, dataset_name: str, category_name: str) -> list:
+    def toCategoryModelIdList(self, category_name: str) -> list:
         sdf_category_folder_path = (
-            self.sdf_folder_path + dataset_name + "/" + category_name + "/"
+            self.sdf_folder_path + category_name + "/"
         )
         if not os.path.exists(sdf_category_folder_path):
             print('[ERROR][Convertor::toCategoryModelIdList]')
@@ -32,7 +32,7 @@ class Convertor(object):
             return []
 
         mash_category_folder_path = (
-            self.mash_folder_path + dataset_name + "/" + category_name + "/"
+            self.mash_folder_path + category_name + "/"
         )
 
         mash_category_filename_list = os.listdir(mash_category_folder_path)
@@ -60,7 +60,6 @@ class Convertor(object):
 
     def convertToCategorySplits(
         self,
-        dataset_name: str,
         category_name: str,
         train_scale: float = 0.8,
         val_scale: float = 0.1,
@@ -71,7 +70,7 @@ class Convertor(object):
             print("\t dataset_root_folder_path:", self.dataset_root_folder_path)
             return [], [], []
 
-        modelid_list = self.toCategoryModelIdList(dataset_name, category_name)
+        modelid_list = self.toCategoryModelIdList(category_name)
 
         permut_modelid_list = np.random.permutation(modelid_list)
 
@@ -103,13 +102,12 @@ class Convertor(object):
 
     def convertToCategorySplitFiles(
         self,
-        dataset_name: str,
         category_name: str,
         train_scale: float = 0.8,
         val_scale: float = 0.1,
     ) -> bool:
         train_split, val_split, test_split = self.convertToCategorySplits(
-            dataset_name, category_name, train_scale, val_scale
+            category_name, train_scale, val_scale
         )
 
         if len(train_split) + len(val_split) + len(test_split) == 0:
@@ -118,7 +116,7 @@ class Convertor(object):
             return False
 
         save_split_folder_path = (
-            self.split_folder_path + dataset_name + "/" + category_name + "/"
+            self.split_folder_path + category_name + "/"
         )
 
         os.makedirs(save_split_folder_path, exist_ok=True)
@@ -139,17 +137,15 @@ class Convertor(object):
 
     def convertToDatasetSplitFiles(
         self,
-        dataset_name: str,
         train_scale: float = 0.8,
         val_scale: float = 0.1,
     ) -> bool:
-        categories = os.listdir(self.mash_folder_path + dataset_name + "/")
+        categories = os.listdir(self.mash_folder_path)
 
         for i, category in enumerate(categories):
             print("[INFO][Convertor::convertToDatasetSplitFiles]")
             print(
                 "\t start convert sdf dataset: "
-                + dataset_name
                 + "["
                 + category
                 + "], "
@@ -160,7 +156,7 @@ class Convertor(object):
             )
 
             self.convertToCategorySplitFiles(
-                dataset_name, category, train_scale, val_scale
+                category, train_scale, val_scale
             )
 
         return True
@@ -170,9 +166,6 @@ class Convertor(object):
         train_scale: float = 0.8,
         val_scale: float = 0.1,
     ) -> bool:
-        dataset_name_list = os.listdir(self.mash_folder_path)
-
-        for dataset_name in dataset_name_list:
-            self.convertToDatasetSplitFiles(dataset_name, train_scale, val_scale)
+        self.convertToDatasetSplitFiles(train_scale, val_scale)
 
         return True

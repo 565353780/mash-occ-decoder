@@ -1,13 +1,11 @@
-import sys
-sys.path.append('../ma-sh/')
-
 import os
 import torch
 import numpy as np
-from tqdm import tqdm
 from torch.utils.data import Dataset
 
-from ma_sh.Model.mash import Mash
+from ma_sh.Method.io import loadMashFileParamsTensor
+
+from mash_occ_decoder.Config.transformer import getTransformer
 
 
 class MashDataset(Dataset):
@@ -15,76 +13,49 @@ class MashDataset(Dataset):
         self,
         dataset_root_folder_path: str,
         split: str = "train",
-        preload_data: bool = False,
+        train_percent: float = 0.9,
     ) -> None:
         self.dataset_root_folder_path = dataset_root_folder_path
         self.split = split
-        self.preload_data = preload_data
 
-        self.mash_folder_path = self.dataset_root_folder_path + "MashV4/"
-        self.split_folder_path = self.dataset_root_folder_path + "SplitMashOCCDecoder/"
+        self.mash_folder_path = self.dataset_root_folder_path + "Objaverse_82K/manifold_mash/"
         assert os.path.exists(self.mash_folder_path)
-        assert os.path.exists(self.split_folder_path)
 
         self.paths_list = []
 
-        dataset_name_list = os.listdir(self.split_folder_path)
+        print("[INFO][MashDataset::__init__]")
+        print("\t start load dataset:", self.mash_folder_path)
+        for root, _, files in os.walk(self.mash_folder_path):
 
-        for dataset_name in dataset_name_list:
-            mash_split_folder_path = self.split_folder_path + dataset_name + "/"
-
-            categories = os.listdir(mash_split_folder_path)
-            # FIXME: for detect test only
-            if self.split == "test":
-                # categories = ["02691156"]
-                categories = ["03001627"]
-
-            for j, category in enumerate(categories):
-                modelid_list_file_path = (
-                    mash_split_folder_path + category + "/" + self.split + ".txt"
-                )
-                if not os.path.exists(modelid_list_file_path):
+            for file in files:
+                if not file.endswith('.npy'):
                     continue
 
-                with open(modelid_list_file_path, "r") as f:
-                    modelid_list = f.read().split()
+                mash_file_path = root + '/' + file
 
-                print("[INFO][MashDataset::__init__]")
-                print(
-                    "\t start load dataset: "
-                    + dataset_name
-                    + "["
-                    + category
-                    + "], "
-                    + str(j + 1)
-                    + "/"
-                    + str(len(categories))
-                    + "..."
-                )
-                for modelid in tqdm(modelid_list):
-                    mash_file_path = (
-                        self.mash_folder_path
-                        + dataset_name
-                        + "/"
-                        + category
-                        + "/"
-                        + modelid
-                        + ".npy"
-                    )
+                self.paths_list.append(mash_file_path)
 
-                    if self.preload_data:
-                        mash_params = np.load(mash_file_path, allow_pickle=True).item()
-                        self.paths_list.append(mash_params)
-                    else:
-                        self.paths_list.append(mash_file_path)
+        self.paths_list.sort()
 
+        train_data_num = max(int(len(self.paths_list) * train_percent), 1)
+
+        if self.split == 'train':
+            self.paths_list = self.paths_list[:train_data_num]
+        else:
+            self.paths_list = self.paths_list[train_data_num:]
+
+        self.transformer = getTransformer('Objaverse_82K')
+        assert self.transformer is not None
         return
 
+    def normalize(self, mash_params: torch.Tensor) -> torch.Tensor:
+        return self.transformer.transform(mash_params, False)
+
+    def normalizeInverse(self, mash_params: torch.Tensor) -> torch.Tensor:
+        return self.transformer.inverse_transform(mash_params, False)
+
     def __len__(self):
-        if self.split == "train":
-            return len(self.paths_list) * 10
-        else:
-            return len(self.paths_list)
+        return len(self.paths_list)
 
     def __getitem__(self, index):
         index = index % len(self.paths_list)
@@ -94,47 +65,15 @@ class MashDataset(Dataset):
         else:
             np.random.seed(1234)
 
-        if self.preload_data:
-            mash_params = self.paths_list[index]
-        else:
-            mash_file_path = self.paths_list[index]
-            mash_params = np.load(mash_file_path, allow_pickle=True).item()
+        mash_file_path = self.paths_list[index]
 
-        rotate_vectors = mash_params["rotate_vectors"]
-        positions = mash_params["positions"]
-        mask_params = mash_params["mask_params"]
-        sh_params = mash_params["sh_params"]
+        mash_params = loadMashFileParamsTensor(mash_file_path, torch.float32, 'cpu')
 
-        permute_idxs = np.random.permutation(rotate_vectors.shape[0])
+        mash_params = self.normalize(mash_params)
 
-        rotate_vectors = rotate_vectors[permute_idxs]
-        positions = positions[permute_idxs]
-        mask_params = mask_params[permute_idxs]
-        sh_params = sh_params[permute_idxs]
+        permute_idxs = np.random.permutation(mash_params.shape[0])
 
-        if self.split == "train":
-            scale_range = [0.9, 1.1]
-            move_range = [-0.1, 0.1]
-
-            random_scale = (
-                scale_range[0] + (scale_range[1] - scale_range[0]) * np.random.rand()
-            )
-            random_translate = move_range[0] + (
-                move_range[1] - move_range[0]
-            ) * np.random.rand(3)
-
-            positions = positions * random_scale + random_translate
-            sh_params = sh_params * random_scale
-
-        mash = Mash(400, 3, 2, 0, 1, 1.0, True, torch.int64, torch.float64, 'cpu')
-        mash.loadParams(mask_params, sh_params, rotate_vectors, positions)
-
-        ortho_poses_tensor = mash.toOrtho6DPoses().float()
-        positions_tensor = torch.tensor(positions).float()
-        mask_params_tesnor = torch.tensor(mask_params).float()
-        sh_params_tensor = torch.tensor(sh_params).float()
-
-        mash_params = torch.cat((ortho_poses_tensor, positions_tensor, mask_params_tesnor, sh_params_tensor), dim=1)
+        mash_params = mash_params[permute_idxs]
 
         feed_dict = {
             "mash_params": mash_params,

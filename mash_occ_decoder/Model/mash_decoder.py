@@ -8,7 +8,7 @@ from mash_occ_decoder.Model.Decoder.Transformer.v3 import (
     MashDecoder as TVD,
 )
 
-from mash_occ_decoder.Model.Decoder.Mamba.v1 import MashDecoder as MSource
-from mash_occ_decoder.Model.Decoder.Mamba.v2 import MashDecoder as MAllEmbed
+# from mash_occ_decoder.Model.Decoder.Mamba.v1 import MashDecoder as MSource
+# from mash_occ_decoder.Model.Decoder.Mamba.v2 import MashDecoder as MAllEmbed
 
 MashDecoder = TVD

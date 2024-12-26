@@ -82,14 +82,15 @@ class Trainer(object):
         self.dataloader_dict = {}
 
         if True:
-            self.dataloader_dict['mash'] =  {
-                'dataset': SDFDataset(dataset_root_folder_path, 'train', n_qry, noise_label_list),
-                'repeat_num': 1,
-            }
+            for noise_label in noise_label_list:
+                self.dataloader_dict['sdf_' + noise_label] =  {
+                    'dataset': SDFDataset(dataset_root_folder_path, 'train', n_qry, noise_label),
+                    'repeat_num': 1,
+                }
 
         if True:
             self.dataloader_dict['eval'] =  {
-                'dataset': SDFDataset(dataset_root_folder_path, 'val', n_qry, noise_label_list),
+                'dataset': SDFDataset(dataset_root_folder_path, 'val', n_qry, noise_label_list[0]),
             }
 
         for key, item in self.dataloader_dict.items():
