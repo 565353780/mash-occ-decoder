@@ -11,6 +11,8 @@ pip install -U trimesh tensorboard Cython pykdtree timm einops scikit-image
 pip install -U causal-conv1d
 pip install -U mamba-ssm
 
+pip install -U prefetch_generator
+
 cd light-field-distance
 python setup.py install
 

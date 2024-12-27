@@ -10,10 +10,10 @@ from mash_occ_decoder.Module.trainer import Trainer
 
 def demo():
     dataset_root_folder_path = os.environ['HOME'] + "/chLi/Dataset/"
-    batch_size = 16
-    accum_iter = 10
+    batch_size = 8
+    accum_iter = 32
     num_workers = 16
-    n_qry = 6000
+    n_qry = 20000
     noise_label_list = ["0_25"]
     model_file_path = None
     # model_file_path = "./output/mamba1-v1-1/model_last.pth"
@@ -22,7 +22,7 @@ def demo():
     warm_step_num = 2000
     finetune_step_num = -1
     lr = 2e-4
-    drop_prob = 0.1
+    drop_prob = 0.0
     kl_weight = 1.0
     save_result_folder_path = "auto"
     save_log_folder_path = "auto"

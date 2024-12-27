@@ -64,9 +64,11 @@ class SDFDataset(Dataset):
         return
 
     def normalize(self, mash_params: torch.Tensor) -> torch.Tensor:
+        return mash_params
         return self.transformer.transform(mash_params, False)
 
     def normalizeInverse(self, mash_params: torch.Tensor) -> torch.Tensor:
+        return mash_params
         return self.transformer.inverse_transform(mash_params, False)
 
     def __len__(self):

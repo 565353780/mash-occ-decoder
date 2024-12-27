@@ -5,16 +5,16 @@ from torch import nn
 from tqdm import tqdm
 from typing import Union
 from torch.optim.adamw import AdamW
-from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import LambdaLR
 from torch.nn.parallel import DistributedDataParallel as DDP
-from torch.utils.data import DataLoader, DistributedSampler
+from torch.utils.data import DistributedSampler
 
 from mash_occ_decoder.Dataset.sdf import SDFDataset
 from mash_occ_decoder.Method.time import getCurrentTime
 from mash_occ_decoder.Method.path import createFileFolder, removeFile, renameFile
 from mash_occ_decoder.Metric.occ import cal_occ_positive_percent, cal_occ_acc
 from mash_occ_decoder.Model.mash_decoder import MashDecoder
+from mash_occ_decoder.Module.dataloader_x import DataLoaderX
 from mash_occ_decoder.Module.logger import Logger
 
 
@@ -30,7 +30,6 @@ def check_and_replace_nan_in_grad(model):
             print(f"NaN detected in gradient: {name}")
             param.grad = torch.where(torch.isnan(param.grad), torch.zeros_like(param.grad), param.grad)
     return True
-
 
 class Trainer(object):
     def __init__(
@@ -95,7 +94,7 @@ class Trainer(object):
 
         for key, item in self.dataloader_dict.items():
             if key == 'eval':
-                self.dataloader_dict[key]['dataloader'] = DataLoader(
+                self.dataloader_dict[key]['dataloader'] = DataLoaderX(
                     item['dataset'],
                     batch_size=batch_size,
                     num_workers=num_workers,
@@ -103,7 +102,7 @@ class Trainer(object):
                 continue
 
             self.dataloader_dict[key]['sampler'] = DistributedSampler(item['dataset'])
-            self.dataloader_dict[key]['dataloader'] = DataLoader(
+            self.dataloader_dict[key]['dataloader'] = DataLoaderX(
                 item['dataset'],
                 sampler=self.dataloader_dict[key]['sampler'],
                 batch_size=batch_size,
@@ -316,9 +315,6 @@ class Trainer(object):
 
         if 'eval' not in self.dataloader_dict.keys():
             return True
-
-        print('[INFO][Trainer::evalEpoch]')
-        print('\t start evaluating ...')
 
         dataloader = self.dataloader_dict['eval']['dataloader']
 
