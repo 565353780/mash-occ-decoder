@@ -12,14 +12,12 @@ class MashDecoder(nn.Module):
     def __init__(
         self,
         depth=24,
-        dim=512,
+        dim=25,
         queries_dim=512,
         output_dim=1,
         heads=8,
         dim_head=64,
         weight_tie_layers=False,
-        dtype=torch.float32,
-        device: str = "cpu",
     ):
         super().__init__()
 
@@ -55,20 +53,27 @@ class MashDecoder(nn.Module):
         self.decoder_ff = PreNorm(queries_dim, FeedForward(queries_dim))
 
         self.to_outputs = nn.Linear(queries_dim, output_dim)
+
         return
 
-    def forward(self, data_dict):
-        x = data_dict["mash_params"]
-        queries = data_dict["qry"]
+    def forward(self, data: dict, drop_prob: float = 0.0, deterministic: bool=False):
+        mash_params = data["mash_params"]
+        queries = data["qry"]
+
+        if drop_prob > 0.0:
+            mask = mash_params.new_empty(*mash_params.shape[:2])
+            mask = mask.bernoulli_(1 - drop_prob)
+            mash_params = mash_params * mask.unsqueeze(-1).expand_as(mash_params).type(mash_params.dtype)
 
         for self_attn, self_ff in self.layers:
-            x = self_attn(x) + x
-            x = self_ff(x) + x
+            mash_params = self_attn(mash_params) + mash_params
+            mash_params = self_ff(mash_params) + mash_params
 
         queries_embeddings = self.point_embed(queries)
-        latents = self.decoder_cross_attn(queries_embeddings, context=x)
+        latents = self.decoder_cross_attn(queries_embeddings, context=mash_params)
 
         latents = latents + self.decoder_ff(latents)
 
         occ = self.to_outputs(latents).squeeze(-1)
-        return occ
+
+        return {'occ': occ}

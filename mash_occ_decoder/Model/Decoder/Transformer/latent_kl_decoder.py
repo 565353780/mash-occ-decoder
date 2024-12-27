@@ -9,7 +9,7 @@ from mash_occ_decoder.Method.cache import cache_fn
 from mash_occ_decoder.Module.diagonal_gaussian_distribution import DiagonalGaussianDistribution
 
 
-class MashDecoder(nn.Module):
+class LatentKLDecoder(nn.Module):
     def __init__(
         self,
         mask_degree: int = 3,
@@ -23,8 +23,6 @@ class MashDecoder(nn.Module):
         heads=8,
         dim_head=64,
         weight_tie_layers=False,
-        dtype=torch.float32,
-        device: str = "cpu",
     ):
         super().__init__()
 

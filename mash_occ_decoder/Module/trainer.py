@@ -110,10 +110,7 @@ class Trainer(object):
             )
 
 
-        self.model = MashDecoder(
-            dtype=self.dtype,
-            device=self.device,
-        ).to(self.device)
+        self.model = MashDecoder().to(self.device)
 
         self.model = DDP(self.model, device_ids=[self.local_rank], output_device=self.local_rank)
 
@@ -190,11 +187,20 @@ class Trainer(object):
 
         gt_occ = data["occ"]
 
-        occ, kl = self.model(data)
+        results = self.model(data)
 
+        occ = results['occ']
         loss_occ = self.loss_fn(occ, gt_occ)
 
-        loss_kl = torch.sum(kl) / kl.shape[0]
+        loss_occ_item = loss_occ.clone().detach().cpu().numpy()
+
+        loss_kl = 0.0
+        loss_kl_item = 0.0
+        if 'kl' in results.keys() and self.loss_kl_weight > 0.0:
+            kl = results['kl']
+            loss_kl = torch.sum(kl) / kl.shape[0]
+            loss_kl_item = loss_kl.clone().detach().cpu().numpy()
+
         weighted_loss_kl = self.loss_kl_weight * loss_kl
 
         loss = loss_occ + weighted_loss_kl
@@ -220,8 +226,8 @@ class Trainer(object):
         positive_occ_percent = cal_occ_positive_percent(gt_occ)
 
         loss_dict = {
-            "LossOCC": loss_occ.clone().detach().cpu().numpy(),
-            "LossKL": loss_kl.clone().detach().cpu().numpy(),
+            "LossOCC": loss_occ_item,
+            "LossKL": loss_kl_item,
             "Loss": loss_item,
             "Accuracy": acc,
             "PositiveOCC": positive_occ_percent,
@@ -236,10 +242,11 @@ class Trainer(object):
         for key in data.keys():
             data[key] = data[key].to(self.device)
 
-        occ, _ = self.model.module(data, drop_prob=0.0, deterministic=True)
+        results = self.model.module(data, drop_prob=0.0, deterministic=True)
 
         gt_occ = data["occ"]
 
+        occ = results['occ']
         loss = self.loss_fn(occ, gt_occ)
 
         loss_item = loss.item()
