@@ -1,6 +1,3 @@
-import sys
-sys.path.append('../ma-sh/')
-
 import time
 import math
 import torch
@@ -10,8 +7,6 @@ import torch.optim as optim
 
 from torch import autograd
 from tqdm import trange, tqdm
-
-from ma_sh.Model.mash import Mash
 
 from mash_occ_decoder.Lib import libmcubes
 from mash_occ_decoder.Lib.libmise import MISE

@@ -1,4 +1,3 @@
-import torch
 from torch import nn
 
 from mash_occ_decoder.Model.Layer.pre_norm import PreNorm
