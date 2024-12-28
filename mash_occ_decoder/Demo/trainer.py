@@ -2,14 +2,17 @@ import sys
 sys.path.append('../ma-sh/')
 sys.path.append('../distribution-manage/')
 
-import os
 import torch
+
+from ma_sh.Config.custom_path import toDatasetRootPath
 
 from mash_occ_decoder.Module.trainer import Trainer
 
 
 def demo():
-    dataset_root_folder_path = os.environ['HOME'] + "/chLi/Dataset/"
+    dataset_root_folder_path = toDatasetRootPath()
+    assert dataset_root_folder_path is not None
+
     batch_size = 8
     accum_iter = 32
     num_workers = 16
