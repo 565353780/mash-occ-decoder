@@ -1,33 +1,41 @@
 import sys
-
-sys.path.append("../ma-sh")
+sys.path.append("../ma-sh/")
+sys.path.append("../distribution-manage/")
 
 import torch
-import numpy as np
 import open3d as o3d
 from shutil import copyfile
 
 from ma_sh.Model.mash import Mash
+from ma_sh.Config.custom_path import toDatasetRootPath
 
 from mash_occ_decoder.Dataset.sdf import SDFDataset
 from mash_occ_decoder.Module.detector import Detector
 
 
 def demo():
-    model_file_path = "./output/20241022_00:34:53/model_best.pth"
-    dtype = torch.float32
+    model_file_path = "../../output/20241227_16:33:30/model_best.pth".replace('../.', '')
+    noise_label = "0_25"
+    transformer_id = 'Objaverse_82K'
     device = "cuda:0"
 
-    dataset_root_folder_path = "/home/chli/Dataset/"
-    sdf_dataset = SDFDataset(dataset_root_folder_path, "val")
+    dataset_root_folder_path = toDatasetRootPath()
+    assert dataset_root_folder_path is not None
 
-    detector = Detector(model_file_path, dtype, device)
+    sdf_dataset = SDFDataset(
+        dataset_root_folder_path,
+        "train",
+        noise_label=noise_label,
+        train_percent=0.9,
+    )
+
+    detector = Detector(model_file_path, transformer_id, device)
 
     for i in range(10):
         mash_params_file_path, sdf_file_path = sdf_dataset.paths_list[i]
         gt_mesh_file_path = sdf_file_path.replace(
-            sdf_dataset.sdf_folder_path_list[0] + "ShapeNet/",
-            "/home/chli/chLi/Dataset/NormalizedMesh/ShapeNet/",
+            "manifold_sdf_" + noise_label,
+            "manifold"
         ).replace(".npy", ".obj")
 
         if True:
@@ -44,12 +52,6 @@ def demo():
             o3d.io.write_point_cloud(
                 "./output/test_mash_pcd" + str(i) + ".ply", pcd, write_ascii=True
             )
-
-        if True:
-            test_mesh = o3d.io.read_triangle_mesh(gt_mesh_file_path)
-            pts = np.asarray(test_mesh.vertices)
-            print(np.min(pts, axis=0))
-            print(np.max(pts, axis=0))
 
         if True:
             copyfile(gt_mesh_file_path, "./output/test_mash_mesh_gt" + str(i) + ".obj")

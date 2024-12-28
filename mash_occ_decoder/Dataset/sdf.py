@@ -4,8 +4,7 @@ import numpy as np
 from torch.utils.data import Dataset
 
 from ma_sh.Method.io import loadMashFileParamsTensor
-
-from mash_occ_decoder.Config.transformer import getTransformer
+from ma_sh.Method.transformer import getTransformer
 
 
 class SDFDataset(Dataset):

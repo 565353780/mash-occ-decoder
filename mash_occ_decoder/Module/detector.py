@@ -3,6 +3,9 @@ import torch
 import trimesh
 from typing import Union
 
+from ma_sh.Method.io import loadMashFileParamsTensor
+from ma_sh.Method.transformer import getTransformer
+
 from mash_occ_decoder.Model.mash_decoder import MashDecoder
 from mash_occ_decoder.Module.generator_3d import Generator3D
 
@@ -11,13 +14,15 @@ class Detector(object):
     def __init__(
         self,
         model_file_path: Union[str, None] = None,
-        dtype=torch.float32,
+        transformer_id: str = 'Objaverse_82K',
         device: str = "cpu",
     ) -> None:
-        self.dtype = dtype
         self.device = device
 
-        self.model = MashDecoder(dtype=self.dtype, device=self.device).to(self.device)
+        self.transformer = getTransformer(transformer_id)
+        assert self.transformer is not None
+
+        self.model = MashDecoder().to(self.device)
 
         self.generator = Generator3D(self.model, device=self.device)
 
@@ -34,8 +39,19 @@ class Detector(object):
 
         state_dict = torch.load(model_file_path, map_location="cpu")["model"]
 
-        self.model.load_state_dict(state_dict)
+        from collections import OrderedDict
+
+        new_state_dict = OrderedDict()
+        for k, v in state_dict.items():
+            name = k.replace("module.", "")
+            new_state_dict[name] = v
+
+        self.model.load_state_dict(new_state_dict)
         self.model.eval()
+
+        print('[INFO][Detector::loadModel]')
+        print('\t load model success!')
+        print('\t model_file_path:', model_file_path)
         return True
 
     @torch.no_grad()
@@ -46,7 +62,11 @@ class Detector(object):
             print("\t mash_params_file_path:", mash_params_file_path)
             return None
 
-        out = self.generator.generate_mesh(mash_params_file_path)
+        mash_params = loadMashFileParamsTensor(mash_params_file_path, torch.float32, self.device)
+
+        mash_params = self.transformer.transform(mash_params)
+
+        out = self.generator.generate_mesh(mash_params)
 
         if isinstance(out, trimesh.Trimesh):
             mesh = out

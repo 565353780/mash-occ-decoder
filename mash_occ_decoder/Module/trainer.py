@@ -400,7 +400,7 @@ class Trainer(object):
         createFileFolder(save_model_file_path)
 
         model_state_dict = {
-            "model": self.model.state_dict(),
+            "model": self.model.module.state_dict(),
             "step": self.step,
             "loss_min": self.loss_min,
         }
