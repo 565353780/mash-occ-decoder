@@ -48,21 +48,18 @@ def demo():
             "manifold"
         ).replace(".npy", ".obj")
 
-        if True:
-            print("start export mesh", i, "...")
-            mesh = detector.detectFile(mash_params_file_path)
-            print(mesh)
-            mesh.export(save_folder_path + "recon_" + str(i) + "_mesh.obj")
+        print("start export mesh", i, "...")
+        mesh = detector.detectFile(mash_params_file_path)
+        print(mesh)
+        mesh.export(save_folder_path + "recon_" + str(i) + "_mesh.obj")
 
-        if True:
-            mash = Mash.fromParamsFile(mash_params_file_path, device=device)
-            mash_points = torch.cat(mash.toSamplePoints()[:2], dim=0).detach().clone().cpu().numpy()
-            pcd = o3d.geometry.PointCloud()
-            pcd.points = o3d.utility.Vector3dVector(mash_points)
-            o3d.io.write_point_cloud(
-                save_folder_path + "mash_" + str(i) + "_pcd.ply", pcd, write_ascii=True
-            )
+        mash = Mash.fromParamsFile(mash_params_file_path, device=device)
+        mash_points = torch.cat(mash.toSamplePoints()[:2], dim=0).detach().clone().cpu().numpy()
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(mash_points)
+        o3d.io.write_point_cloud(
+            save_folder_path + "mash_" + str(i) + "_pcd.ply", pcd, write_ascii=True
+        )
 
-        if True:
-            copyfile(gt_mesh_file_path, save_folder_path + "gt_" + str(i) + "_mesh.obj")
+        copyfile(gt_mesh_file_path, save_folder_path + "gt_" + str(i) + "_mesh.obj")
     return True

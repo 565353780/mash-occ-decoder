@@ -58,10 +58,12 @@ class Detector(object):
     def detect(self, mash_params: torch.Tensor) -> Union[trimesh.Trimesh, None]:
         mash_params = self.transformer.transform(mash_params)
 
+        mash_params = mash_params.unsqueeze(0)
+
         def toOCC(xyz: torch.Tensor) -> torch.Tensor:
             data = {
-                'mash_params': mash_params.unsqueeze(0),
-                'qry': xyz.to(mash_params.dtype).unsqueeze(0),
+                'mash_params': mash_params,
+                'qry': xyz.to(self.device, dtype=mash_params.dtype).unsqueeze(0),
             }
 
             results = self.model(data)
