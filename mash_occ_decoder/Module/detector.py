@@ -7,7 +7,7 @@ from ma_sh.Method.io import loadMashFileParamsTensor
 from ma_sh.Method.transformer import getTransformer
 
 from mash_occ_decoder.Model.mash_decoder import MashDecoder
-from mash_occ_decoder.Module.generator_3d import Generator3D
+from mash_occ_decoder.Lib.ODC.occupancy_dual_contouring import occupancy_dual_contouring
 
 
 class Detector(object):
@@ -24,7 +24,7 @@ class Detector(object):
 
         self.model = MashDecoder().to(self.device)
 
-        self.generator = Generator3D(self.model, device=self.device)
+        self.odc = occupancy_dual_contouring(self.device)
 
         if model_file_path is not None:
             self.loadModel(model_file_path)
@@ -55,6 +55,33 @@ class Detector(object):
         return True
 
     @torch.no_grad()
+    def detect(self, mash_params: torch.Tensor) -> Union[trimesh.Trimesh, None]:
+        mash_params = self.transformer.transform(mash_params)
+
+        def toOCC(xyz: torch.Tensor) -> torch.Tensor:
+            data = {
+                'mash_params': mash_params.unsqueeze(0),
+                'qry': xyz.to(mash_params.dtype).unsqueeze(0),
+            }
+
+            results = self.model(data)
+
+            occ = results['occ'].reshape(-1)
+
+            return occ.to(xyz.dtype)
+
+        vertices, triangles = self.odc.extract_mesh(
+            imp_func=toOCC,
+            num_grid=64,
+            isolevel=0.5,
+            outside=False,
+        )
+
+        mesh = trimesh.Trimesh(vertices, triangles)
+
+        return mesh
+
+    @torch.no_grad()
     def detectFile(self, mash_params_file_path: str) -> Union[trimesh.Trimesh, None]:
         if not os.path.exists(mash_params_file_path):
             print("[ERROR][Detector::detectFile]")
@@ -64,13 +91,6 @@ class Detector(object):
 
         mash_params = loadMashFileParamsTensor(mash_params_file_path, torch.float32, self.device)
 
-        mash_params = self.transformer.transform(mash_params)
-
-        out = self.generator.generate_mesh(mash_params)
-
-        if isinstance(out, trimesh.Trimesh):
-            mesh = out
-        else:
-            mesh = out[0]
+        mesh = self.detect(mash_params)
 
         return mesh
