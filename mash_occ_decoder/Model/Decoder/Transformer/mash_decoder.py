@@ -11,7 +11,8 @@ class MashDecoder(nn.Module):
     def __init__(
         self,
         depth=24,
-        dim=25,
+        mash_dim: int = 25,
+        dim: int = 512,
         queries_dim=512,
         output_dim=1,
         heads=8,
@@ -23,6 +24,8 @@ class MashDecoder(nn.Module):
         self.depth = depth
 
         self.point_embed = PointEmbed(dim=queries_dim)
+
+        self.proj = nn.Linear(mash_dim, dim)
 
         def get_latent_attn():
             return PreNorm(
@@ -52,7 +55,6 @@ class MashDecoder(nn.Module):
         self.decoder_ff = PreNorm(queries_dim, FeedForward(queries_dim))
 
         self.to_outputs = nn.Linear(queries_dim, output_dim)
-
         return
 
     def forward(self, data: dict, drop_prob: float = 0.0, deterministic: bool=False):
@@ -63,6 +65,8 @@ class MashDecoder(nn.Module):
             mask = mash_params.new_empty(*mash_params.shape[:2])
             mask = mask.bernoulli_(1 - drop_prob)
             mash_params = mash_params * mask.unsqueeze(-1).expand_as(mash_params).type(mash_params.dtype)
+
+        mash_params = self.proj(mash_params)
 
         for self_attn, self_ff in self.layers:
             mash_params = self_attn(mash_params) + mash_params

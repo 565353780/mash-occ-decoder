@@ -13,7 +13,7 @@ def demo():
     batch_size = 8
     accum_iter = 32
     num_workers = 16
-    n_qry = 40000
+    n_qry = 28000
     noise_label_list = ["0_25"]
     model_file_path = None
     # model_file_path = "./output/mamba1-v1-1/model_last.pth"
