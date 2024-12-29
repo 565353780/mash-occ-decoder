@@ -86,6 +86,13 @@ class Trainer(BaseTrainer):
         self.model = MashDecoder().to(self.device)
         return True
 
+    def preProcessData(self, data_dict: dict, is_training: bool = True) -> dict:
+        if is_training:
+            data_dict['drop_prob'] = self.drop_prob
+        else:
+            data_dict['drop_prob'] = 0.0
+        return data_dict
+
     def getLossDict(self, data_dict: dict, result_dict: dict) -> dict:
         gt_occ = data_dict['occ']
         occ = result_dict['occ']
@@ -112,10 +119,3 @@ class Trainer(BaseTrainer):
         }
 
         return loss_dict
-
-    def preProcessData(self, data_dict: dict, is_training: bool = True) -> dict:
-        if is_training:
-            data_dict['drop_prob'] = self.drop_prob
-        else:
-            data_dict['drop_prob'] = 0.0
-        return data_dict
