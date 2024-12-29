@@ -57,9 +57,10 @@ class MashDecoder(nn.Module):
         self.to_outputs = nn.Linear(queries_dim, output_dim)
         return
 
-    def forward(self, data: dict, drop_prob: float = 0.0, deterministic: bool=False):
-        mash_params = data["mash_params"]
-        queries = data["qry"]
+    def forward(self, data_dict: dict):
+        mash_params = data_dict["mash_params"]
+        queries = data_dict["qry"]
+        drop_prob = data_dict['drop_prob']
 
         if drop_prob > 0.0:
             mask = mash_params.new_empty(*mash_params.shape[:2])
@@ -79,4 +80,8 @@ class MashDecoder(nn.Module):
 
         occ = self.to_outputs(latents).squeeze(-1)
 
-        return {'occ': occ}
+        result_dict = {
+            'occ': occ
+        }
+
+        return result_dict
