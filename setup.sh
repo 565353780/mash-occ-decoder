@@ -1,5 +1,9 @@
 cd ..
+git clone https://github.com/565353780/base-trainer.git
 git clone https://github.com/kacperkan/light-field-distance
+
+cd ../base-trainer
+./setup.sh
 
 if [ "$(uname)" == "Darwin" ]; then
   pip install open3d==0.15.1
@@ -13,7 +17,7 @@ pip install -U mamba-ssm
 
 pip install -U prefetch_generator
 
-cd light-field-distance
+cd ../light-field-distance
 python setup.py install
 
 cd ../aro-net
