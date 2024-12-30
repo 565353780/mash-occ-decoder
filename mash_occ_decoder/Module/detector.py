@@ -30,23 +30,21 @@ class Detector(object):
             self.loadModel(model_file_path)
         return
 
-    def loadModel(self, model_file_path: str) -> bool:
+    def loadModel(self, model_file_path: str, use_ema: bool = True) -> bool:
         if not os.path.exists(model_file_path):
             print("[ERROR][Detector::loadModel]")
             print("\t model file not exist!")
             print("\t model_file_path:", model_file_path)
             return False
 
-        state_dict = torch.load(model_file_path, map_location="cpu")["model"]
+        state_dict = torch.load(model_file_path, map_location="cpu")
 
-        from collections import OrderedDict
+        if use_ema:
+            model_state_dict = state_dict['ema_model']
+        else:
+            model_state_dict = state_dict['model']
 
-        new_state_dict = OrderedDict()
-        for k, v in state_dict.items():
-            name = k.replace("module.", "")
-            new_state_dict[name] = v
-
-        self.model.load_state_dict(new_state_dict)
+        self.model.load_state_dict(model_state_dict)
         self.model.eval()
 
         print('[INFO][Detector::loadModel]')
@@ -64,6 +62,7 @@ class Detector(object):
             data = {
                 'mash_params': mash_params,
                 'qry': xyz.to(self.device, dtype=mash_params.dtype).unsqueeze(0),
+                'drop_prob': 0.0,
             }
 
             results = self.model(data)
@@ -74,12 +73,13 @@ class Detector(object):
 
         vertices, triangles = self.odc.extract_mesh(
             imp_func=toOCC,
-            num_grid=64,
+            num_grid=128,
             isolevel=0.5,
+            batch_size=1200000,
             outside=False,
         )
 
-        mesh = trimesh.Trimesh(vertices, triangles)
+        mesh = trimesh.Trimesh(vertices.cpu(), triangles.cpu())
 
         return mesh
 
