@@ -1,4 +1,3 @@
-from torch import nn
 from typing import Union
 
 from base_trainer.Module.base_trainer import BaseTrainer
@@ -13,27 +12,27 @@ class Trainer(BaseTrainer):
     def __init__(
         self,
         dataset_root_folder_path: str,
-        batch_size: int = 400,
-        accum_iter: int = 1,
-        num_workers: int = 4,
+        batch_size: int = 8,
+        accum_iter: int = 32,
+        num_workers: int = 16,
         model_file_path: Union[str, None] = None,
         device: str = "auto",
         warm_step_num: int = 2000,
         finetune_step_num: int = -1,
-        lr: float = 1e-2,
+        lr: float = 2e-4,
         lr_batch_size: int = 256,
         ema_start_step: int = 5000,
         ema_decay_init: float = 0.99,
         ema_decay: float = 0.999,
-        save_result_folder_path: Union[str, None] = None,
-        save_log_folder_path: Union[str, None] = None,
-        best_model_metric_name: Union[str, None] = None,
-        is_metric_lower_better: bool = True,
+        save_result_folder_path: Union[str, None] = 'auto',
+        save_log_folder_path: Union[str, None] = 'auto',
+        best_model_metric_name: Union[str, None] = 'Accuracy',
+        is_metric_lower_better: bool = False,
         sample_results_freq: int = -1,
-        use_dataloader_x: bool = False,
-        n_qry: int = 200,
+        use_amp: bool = False,
+        n_qry: int = 28000,
         noise_label_list: list = ["0_25"],
-        drop_prob: float = 0.75,
+        drop_prob: float = 0.1,
     ) -> None:
         self.dataset_root_folder_path = dataset_root_folder_path
 
@@ -61,7 +60,7 @@ class Trainer(BaseTrainer):
             best_model_metric_name,
             is_metric_lower_better,
             sample_results_freq,
-            use_dataloader_x,
+            use_amp,
         )
         return
 

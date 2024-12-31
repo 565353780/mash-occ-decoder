@@ -30,7 +30,7 @@ def demo():
     best_model_metric_name = 'Accuracy'
     is_metric_lower_better = False
     sample_results_freq = -1
-    use_dataloader_x = False
+    use_amp = False
     n_qry = 28000
     noise_label_list = ["0_25"]
     drop_prob = 0.1
@@ -54,7 +54,7 @@ def demo():
         best_model_metric_name,
         is_metric_lower_better,
         sample_results_freq,
-        use_dataloader_x,
+        use_amp,
         n_qry,
         noise_label_list,
         drop_prob,
