@@ -33,7 +33,7 @@ def demo():
     use_amp = False
     n_qry = 28000
     noise_label_list = ["0_25"]
-    drop_prob = 0.1
+    drop_prob = 0.0
 
     trainer = Trainer(
         dataset_root_folder_path,
