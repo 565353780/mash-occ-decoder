@@ -8,16 +8,16 @@ import os
 from ma_sh.Model.mash import Mash
 from ma_sh.Config.custom_path import toDatasetRootPath
 
-from mash_occ_decoder.Method.time import getCurrentTime
 from mash_occ_decoder.Module.detector import Detector
 
 
 def demo():
-    model_file_path = "../../output/20241227_16:33:30/model_best.pth".replace('../.', '')
+    model_file_path = "../../output/512dim-v1/model_best.pth".replace('../.', '')
     transformer_id = 'Objaverse_82K'
-    device = "cpu"
-    pcd_folder_path = '../../../td-shape-to-vec-set/output/sample/20241228_14:43:22/'.replace('../.', '')
-    save_folder_path = './output/recon/' + getCurrentTime() + '/'
+    device = "cuda:0"
+    time_stamp = '20241231_06:33:59'
+    pcd_folder_path = '../../../conditional-flow-matching/output/sample/'.replace('../.', '') + time_stamp + '/'
+    save_folder_path = './output/recon_CFM/' + time_stamp + '/'
 
     os.makedirs(save_folder_path, exist_ok=True)
 

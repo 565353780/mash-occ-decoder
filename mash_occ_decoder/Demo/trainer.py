@@ -16,7 +16,7 @@ def demo():
     accum_iter = 32
     num_workers = 16
     model_file_path = None
-    model_file_path = "../../output/20241229_02:11:37/model_last.pth".replace('../.', '')
+    model_file_path = "../../output/20241231_09:38:46/model_last.pth".replace('../.', '')
     device = "auto"
     warm_step_num = 2000
     finetune_step_num = -1
@@ -33,8 +33,7 @@ def demo():
     use_dataloader_x = False
     n_qry = 28000
     noise_label_list = ["0_25"]
-    drop_prob = 0.0
-    kl_weight = 1.0
+    drop_prob = 0.1
 
     trainer = Trainer(
         dataset_root_folder_path,
@@ -59,7 +58,6 @@ def demo():
         n_qry,
         noise_label_list,
         drop_prob,
-        kl_weight,
     )
 
     trainer.train()
