@@ -1,9 +1,9 @@
+from torch import nn
 from typing import Union
 
 from base_trainer.Module.base_trainer import BaseTrainer
 
 from mash_occ_decoder.Dataset.sdf import SDFDataset
-from mash_occ_decoder.Loss.focal import FocalLoss
 from mash_occ_decoder.Metric.occ import cal_occ_positive_percent, cal_occ_acc
 from mash_occ_decoder.Model.mash_decoder import MashDecoder
 
@@ -40,7 +40,7 @@ class Trainer(BaseTrainer):
         self.noise_label_list = noise_label_list
         self.drop_prob = drop_prob
 
-        self.loss_fn = FocalLoss()
+        self.loss_fn = nn.BCEWithLogitsLoss()
 
         super().__init__(
             batch_size,
