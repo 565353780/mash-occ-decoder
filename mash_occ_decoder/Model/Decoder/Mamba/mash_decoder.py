@@ -56,6 +56,8 @@ class MashDecoder(nn.Module):
 
         self.point_embed = PointEmbed(3, d_hidden_embed, d_hidden)
 
+        self.proj = nn.Linear(self.anchor_dim, d_hidden)
+
         self.fused_add_norm = fused_add_norm
         if self.fused_add_norm:
             if layer_norm_fn is None or rms_norm_fn is None:
@@ -76,7 +78,7 @@ class MashDecoder(nn.Module):
         self.layers = nn.ModuleList(
             [
                 create_block(
-                    self.anchor_dim,
+                    d_hidden,
                     d_intermediate=d_intermediate,
                     ssm_cfg=ssm_cfg,
                     norm_epsilon=norm_epsilon,
@@ -92,17 +94,25 @@ class MashDecoder(nn.Module):
 
         self.decoder_cross_attn = PreNorm(
             d_hidden,
-            Attention(d_hidden, self.anchor_dim, heads=n_cross, dim_head=d_hidden),
-            context_dim=self.anchor_dim,
+            Attention(d_hidden, d_hidden, heads=n_cross, dim_head=d_hidden),
+            context_dim=d_hidden,
         )
         self.decoder_ff = PreNorm(d_hidden, FeedForward(d_hidden))
 
         self.to_outputs = nn.Linear(d_hidden, 1)
         return
 
-    def forward(self, data_dict):
-        x = data_dict["mash_params"]
+    def forward(self, data_dict: dict) -> dict:
+        mash_params = data_dict["mash_params"]
         queries = data_dict["qry"]
+        drop_prob = data_dict['drop_prob']
+
+        if drop_prob > 0.0:
+            mask = mash_params.new_empty(*mash_params.shape[:2])
+            mask = mask.bernoulli_(1 - drop_prob)
+            mash_params = mash_params * mask.unsqueeze(-1).expand_as(mash_params).type(mash_params.dtype)
+
+        x = self.proj(mash_params)
 
         for layer in self.layers:
             x, residual = layer(x)
@@ -114,4 +124,9 @@ class MashDecoder(nn.Module):
         latents = latents + self.decoder_ff(latents)
 
         occ = self.to_outputs(latents).squeeze(-1)
-        return occ
+
+        result_dict = {
+            'occ': occ
+        }
+
+        return result_dict

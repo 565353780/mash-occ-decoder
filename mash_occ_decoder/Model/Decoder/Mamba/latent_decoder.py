@@ -111,9 +111,15 @@ class MashDecoder(nn.Module):
         )
         return mash_embeddings
 
-    def forward(self, data_dict):
+    def forward(self, data_dict: dict) -> dict:
         mash_params = data_dict["mash_params"]
         queries = data_dict["qry"]
+        drop_prob = data_dict['drop_prob']
+
+        if drop_prob > 0.0:
+            mask = mash_params.new_empty(*mash_params.shape[:2])
+            mask = mask.bernoulli_(1 - drop_prob)
+            mash_params = mash_params * mask.unsqueeze(-1).expand_as(mash_params).type(mash_params.dtype)
 
         hidden_states = self.embedMash(mash_params)
         residual = None
@@ -142,4 +148,9 @@ class MashDecoder(nn.Module):
         latents = latents + self.decoder_ff(latents)
 
         occ = self.to_outputs(latents).squeeze(-1)
-        return occ
+
+        result_dict = {
+            'occ': occ
+        }
+
+        return result_dict

@@ -6,10 +6,9 @@ from mash_occ_decoder.Model.Layer.feed_forward import FeedForward
 from mash_occ_decoder.Model.Layer.attention import Attention
 from mash_occ_decoder.Model.Layer.point_embed import PointEmbed
 from mash_occ_decoder.Method.cache import cache_fn
-from mash_occ_decoder.Module.diagonal_gaussian_distribution import DiagonalGaussianDistribution
 
 
-class LatentKLDecoder(nn.Module):
+class LatentDecoder(nn.Module):
     def __init__(
         self,
         mask_degree: int = 3,
@@ -72,11 +71,6 @@ class LatentKLDecoder(nn.Module):
         self.decoder_ff = PreNorm(hidden_dim, FeedForward(hidden_dim))
 
         self.to_outputs = nn.Linear(hidden_dim, output_dim)
-
-        self.mean_fc = nn.Linear(hidden_dim, latent_dim)
-        self.logvar_fc = nn.Linear(hidden_dim, latent_dim)
-
-        self.proj = nn.Linear(latent_dim, hidden_dim)
         return
 
     def embedMash(self, mash_params: torch.Tensor) -> torch.Tensor:
@@ -91,9 +85,10 @@ class LatentKLDecoder(nn.Module):
         )
         return mash_embeddings
 
-    def forward(self, data: dict, drop_prob: float = 0.0, deterministic: bool=False):
-        mash_params = data["mash_params"]
-        queries = data["qry"]
+    def forward(self, data_dict: dict) -> dict:
+        mash_params = data_dict["mash_params"]
+        queries = data_dict["qry"]
+        drop_prob = data_dict['drop_prob']
 
         if drop_prob > 0.0:
             mask = mash_params.new_empty(*mash_params.shape[:2])
@@ -101,15 +96,6 @@ class LatentKLDecoder(nn.Module):
             mash_params = mash_params * mask.unsqueeze(-1).expand_as(mash_params).type(mash_params.dtype)
 
         x = self.embedMash(mash_params)
-
-        mean = self.mean_fc(x)
-        logvar = self.logvar_fc(x)
-
-        posterior = DiagonalGaussianDistribution(mean, logvar, deterministic)
-        x = posterior.sample()
-        kl = posterior.kl()
-
-        x = self.proj(x)
 
         for self_attn, self_ff in self.layers:
             x = self_attn(x) + x
@@ -122,4 +108,8 @@ class LatentKLDecoder(nn.Module):
 
         occ = self.to_outputs(latents).squeeze(-1)
 
-        return occ, kl
+        result_dict = {
+            'occ': occ
+        }
+
+        return result_dict
