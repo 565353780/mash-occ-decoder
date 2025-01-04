@@ -15,7 +15,7 @@ def demo():
     model_file_path = "../../output/20250101_01:12:59/model_best.pth".replace('../.', '')
     transformer_id = 'Objaverse_82K'
     device = "cpu"
-    time_stamp = '20250104_13:05:32'
+    time_stamp = '20250104_17:29:23'
     pcd_folder_path = '../../../mash-diffusion/output/sample/'.replace('../.', '') + time_stamp + '/'
     save_folder_path = './output/recon_CFM/' + time_stamp + '/'
 
@@ -43,7 +43,16 @@ def demo():
             print("start export mesh for mash " + file + "...")
             mesh = detector.detectFile(mash_file_path)
             print(mesh)
+
             mesh.export(save_mesh_file_path)
 
-            Mash.fromParamsFile(mash_file_path, device=device).saveAsPcdFile(save_mesh_folder_path + file.replace('mash', 'mash_pcd').replace('.npy', '.ply'))
+            save_mash_pcd_file_path = save_mesh_folder_path + file.replace(
+                'mash', 'mash_pcd').replace('.npy', '.ply')
+            Mash.fromParamsFile(
+                mash_file_path,
+                device=device,
+            ).saveAsPcdFile(
+                save_mash_pcd_file_path,
+                overwrite=True,
+            )
     return True
