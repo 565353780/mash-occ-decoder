@@ -12,11 +12,11 @@ from mash_occ_decoder.Module.detector import Detector
 
 
 def demo():
-    model_file_path = "../../output/512dim-v1/model_best.pth".replace('../.', '')
+    model_file_path = "../../output/20250101_01:12:59/model_best.pth".replace('../.', '')
     transformer_id = 'Objaverse_82K'
-    device = "cuda:0"
-    time_stamp = '20241231_06:33:59'
-    pcd_folder_path = '../../../conditional-flow-matching/output/sample/'.replace('../.', '') + time_stamp + '/'
+    device = "cpu"
+    time_stamp = '20250104_13:05:32'
+    pcd_folder_path = '../../../mash-diffusion/output/sample/'.replace('../.', '') + time_stamp + '/'
     save_folder_path = './output/recon_CFM/' + time_stamp + '/'
 
     os.makedirs(save_folder_path, exist_ok=True)

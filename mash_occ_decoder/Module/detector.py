@@ -7,7 +7,7 @@ from ma_sh.Method.io import loadMashFileParamsTensor
 from ma_sh.Method.transformer import getTransformer
 
 from mash_occ_decoder.Model.mash_decoder import MashDecoder
-from mash_occ_decoder.Lib.ODC.occupancy_dual_contouring import occupancy_dual_contouring
+from mash_occ_decoder.Method.tomesh import extractMesh
 
 
 class Detector(object):
@@ -23,8 +23,6 @@ class Detector(object):
         assert self.transformer is not None
 
         self.model = MashDecoder().to(self.device)
-
-        self.odc = occupancy_dual_contouring(self.device)
 
         if model_file_path is not None:
             self.loadModel(model_file_path)
@@ -56,30 +54,7 @@ class Detector(object):
     def detect(self, mash_params: torch.Tensor) -> Union[trimesh.Trimesh, None]:
         mash_params = self.transformer.transform(mash_params)
 
-        mash_params = mash_params.unsqueeze(0)
-
-        def toOCC(xyz: torch.Tensor) -> torch.Tensor:
-            data = {
-                'mash_params': mash_params,
-                'qry': xyz.to(self.device, dtype=mash_params.dtype).unsqueeze(0),
-                'drop_prob': 0.0,
-            }
-
-            results = self.model(data)
-
-            occ = results['occ'].reshape(-1)
-
-            return occ.to(xyz.dtype)
-
-        vertices, triangles = self.odc.extract_mesh(
-            imp_func=toOCC,
-            num_grid=128,
-            isolevel=0.5,
-            batch_size=1200000,
-            outside=False,
-        )
-
-        mesh = trimesh.Trimesh(vertices.cpu(), triangles.cpu())
+        mesh = extractMesh(mash_params, self.model, 128, 1200000, 'mc')
 
         return mesh
 
