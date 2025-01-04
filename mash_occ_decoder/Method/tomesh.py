@@ -11,9 +11,9 @@ from mash_occ_decoder.Lib.ODC.occupancy_dual_contouring import occupancy_dual_co
 
 
 @torch.no_grad()
-def toOCC(mash_params: torch.Tensor,
-          model: nn.Module,
-          qry: torch.Tensor) -> torch.Tensor:
+def toOCC(qry: torch.Tensor,
+          mash_params: torch.Tensor,
+          model: nn.Module) -> torch.Tensor:
     data = {
         'mash_params': mash_params.reshape(1, -1, 25),
         'qry': qry.to(mash_params.device, dtype=mash_params.dtype).reshape(1, -1, 3),

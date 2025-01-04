@@ -54,7 +54,7 @@ class Detector(object):
     def detect(self, mash_params: torch.Tensor) -> Union[trimesh.Trimesh, None]:
         mash_params = self.transformer.transform(mash_params)
 
-        mesh = extractMesh(mash_params, self.model, 128, 1200000, 'mc')
+        mesh = extractMesh(mash_params, self.model, 128, 1200000, 'odc')
 
         return mesh
 
