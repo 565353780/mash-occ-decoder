@@ -14,9 +14,13 @@ class Detector(object):
     def __init__(
         self,
         model_file_path: Union[str, None] = None,
+        batch_size: int = 1200000,
+        resolution: int = 128,
         transformer_id: str = 'Objaverse_82K',
         device: str = "cpu",
     ) -> None:
+        self.batch_size = batch_size
+        self.resolution = resolution
         self.device = device
 
         self.transformer = getTransformer(transformer_id)
@@ -54,7 +58,7 @@ class Detector(object):
     def detect(self, mash_params: torch.Tensor) -> Union[trimesh.Trimesh, None]:
         mash_params = self.transformer.transform(mash_params)
 
-        mesh = extractMesh(mash_params, self.model, 128, 1200000, 'odc')
+        mesh = extractMesh(mash_params, self.model, self.resolution, self.batch_size, 'odc')
 
         return mesh
 

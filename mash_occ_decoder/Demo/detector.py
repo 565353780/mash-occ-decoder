@@ -12,10 +12,12 @@ from mash_occ_decoder.Module.detector import Detector
 
 
 def demo():
-    model_file_path = "../../output/20250101_01:12:59/model_best.pth".replace('../.', '')
+    model_file_path = "../../output/512dim-v4/model_best.pth".replace('../.', '')
+    batch_size = 1200000
+    resolution = 128
     transformer_id = 'Objaverse_82K'
-    device = "cpu"
-    time_stamp = '20250104_17:29:23'
+    device = "cuda:0"
+    time_stamp = '20250108_17:45:41'
     pcd_folder_path = '../../../mash-diffusion/output/sample/'.replace('../.', '') + time_stamp + '/'
     save_folder_path = './output/recon_CFM/' + time_stamp + '/'
 
@@ -24,7 +26,7 @@ def demo():
     dataset_root_folder_path = toDatasetRootPath()
     assert dataset_root_folder_path is not None
 
-    detector = Detector(model_file_path, transformer_id, device)
+    detector = Detector(model_file_path, batch_size, resolution, transformer_id, device)
 
     for root, _, files in os.walk(pcd_folder_path):
         for file in files:
