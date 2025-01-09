@@ -16,11 +16,11 @@ def demo():
     accum_iter = 32
     num_workers = 16
     model_file_path = None
-    model_file_path = "../../output/512dim-v2/model_last.pth".replace('../.', '')
+    model_file_path = "../../output/512dim-v4/model_last.pth".replace('../.', '')
     device = "auto"
     warm_step_num = 2000
     finetune_step_num = -1
-    lr = 1e-4
+    lr = 1e-6
     lr_batch_size = 256
     ema_start_step = 5000
     ema_decay_init = 0.99
