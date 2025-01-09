@@ -8,6 +8,7 @@ import os
 from ma_sh.Model.mash import Mash
 from ma_sh.Config.custom_path import toDatasetRootPath
 
+from mash_occ_decoder.Method.path import createFileFolder
 from mash_occ_decoder.Module.detector import Detector
 
 
@@ -25,6 +26,8 @@ def demo_file():
     print("start export mesh for mash " + mash_file_path + "...")
     mesh = detector.detectFile(mash_file_path)
     print(mesh)
+
+    createFileFolder(save_mesh_file_path)
 
     mesh.export(save_mesh_file_path)
 
@@ -46,7 +49,7 @@ def demo_folder():
     transformer_id = 'Objaverse_82K'
     device = "cuda:0"
     time_stamp = '20250108_17:45:41'
-    pcd_folder_path = '../../../mash-diffusion/output/sample/'.replace('../.', '') + time_stamp + '/'
+    mash_folder_path = '../../../mash-diffusion/output/sample/'.replace('../.', '') + time_stamp + '/'
     save_folder_path = './output/recon_CFM/' + time_stamp + '/'
 
     os.makedirs(save_folder_path, exist_ok=True)
@@ -56,12 +59,12 @@ def demo_folder():
 
     detector = Detector(model_file_path, batch_size, resolution, transformer_id, device)
 
-    for root, _, files in os.walk(pcd_folder_path):
+    for root, _, files in os.walk(mash_folder_path):
         for file in files:
             if not file.endswith('.npy'):
                 continue
 
-            rel_folder_path = os.path.relpath(root, pcd_folder_path)
+            rel_folder_path = os.path.relpath(root, mash_folder_path)
 
             mash_file_path = root + '/' + file
 
