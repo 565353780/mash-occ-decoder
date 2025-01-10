@@ -8,7 +8,6 @@ import os
 from ma_sh.Model.mash import Mash
 from ma_sh.Config.custom_path import toDatasetRootPath
 
-from mash_occ_decoder.Method.path import createFileFolder
 from mash_occ_decoder.Module.detector import Detector
 
 
@@ -18,28 +17,35 @@ def demo_file():
     resolution = 128
     transformer_id = 'Objaverse_82K'
     device = "cuda:0"
-    mash_file_path = '/home/chli/chLi/Dataset/Objaverse_82K/manifold_mash/000-091/897ce33a65d04bb69eb3d87d0742464f.npy'
-    save_mesh_file_path = './output/recon_CFM/000-091/897ce33a65d04bb69eb3d87d0742464f_mesh.obj'
+    mash_file_path_list = [
+        '/home/chli/chLi/Dataset/Objaverse_82K/manifold_mash/000-091/897ce33a65d04bb69eb3d87d0742464f.npy',
+        # '/home/chli/chLi/Dataset/Objaverse_82K/manifold_mash/000-091/aba44d3812ae4377a5347b5a482f51ab.npy',
+        '/home/chli/chLi/Dataset/Objaverse_82K/manifold_mash/000-091/e7c39d9f92b94bd8a1d44986f5c37549.npy',
+    ]
+    save_mesh_folder_path = './output/recon_CFM/000-091/'
+
+    os.makedirs(save_mesh_folder_path, exist_ok=True)
 
     detector = Detector(model_file_path, batch_size, resolution, transformer_id, device)
 
-    print("start export mesh for mash " + mash_file_path + "...")
-    mesh = detector.detectFile(mash_file_path)
-    print(mesh)
+    for mash_file_path in mash_file_path_list:
+        print("start export mesh for mash " + mash_file_path + "...")
+        mesh = detector.detectFile(mash_file_path)
+        print(mesh)
 
-    createFileFolder(save_mesh_file_path)
+        save_mesh_file_path = save_mesh_folder_path + mash_file_path.split('/')[-1].replace('.npy', '_mesh.obj')
 
-    mesh.export(save_mesh_file_path)
+        mesh.export(save_mesh_file_path)
 
-    save_mash_pcd_file_path = save_mesh_file_path.replace(
-        'mash', 'mash_pcd').replace('.obj', '.ply')
-    Mash.fromParamsFile(
-        mash_file_path,
-        device=device,
-    ).saveAsPcdFile(
-        save_mash_pcd_file_path,
-        overwrite=True,
-    )
+        save_mash_pcd_file_path = save_mesh_file_path.replace(
+            'mesh', 'mash_pcd').replace('.obj', '.ply')
+        Mash.fromParamsFile(
+            mash_file_path,
+            device=device,
+        ).saveAsPcdFile(
+            save_mash_pcd_file_path,
+            overwrite=True,
+        )
     return True
 
 def demo_folder():
