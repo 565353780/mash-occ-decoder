@@ -1,3 +1,4 @@
+import torch
 from torch import nn
 from typing import Union
 
@@ -17,6 +18,7 @@ class Trainer(BaseTrainer):
         num_workers: int = 16,
         model_file_path: Union[str, None] = None,
         device: str = "auto",
+        dtype = torch.float32,
         warm_step_num: int = 2000,
         finetune_step_num: int = -1,
         lr: float = 2e-4,
@@ -30,6 +32,7 @@ class Trainer(BaseTrainer):
         is_metric_lower_better: bool = False,
         sample_results_freq: int = -1,
         use_amp: bool = False,
+        quick_test: bool = False,
         n_qry: int = 28000,
         noise_label_list: list = ["0_25"],
         drop_prob: float = 0.1,
@@ -48,6 +51,7 @@ class Trainer(BaseTrainer):
             num_workers,
             model_file_path,
             device,
+            dtype,
             warm_step_num,
             finetune_step_num,
             lr,
@@ -61,6 +65,7 @@ class Trainer(BaseTrainer):
             is_metric_lower_better,
             sample_results_freq,
             use_amp,
+            quick_test,
         )
         return
 

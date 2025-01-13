@@ -3,6 +3,8 @@ sys.path.append('../ma-sh/')
 sys.path.append('../distribution-manage/')
 sys.path.append('../base-trainer/')
 
+import torch
+
 from ma_sh.Config.custom_path import toDatasetRootPath
 
 from mash_occ_decoder.Module.trainer import Trainer
@@ -13,14 +15,15 @@ def demo():
     assert dataset_root_folder_path is not None
 
     batch_size = 8
-    accum_iter = 32
+    accum_iter = 64
     num_workers = 16
     model_file_path = None
     model_file_path = "../../output/512dim-v4/model_last.pth".replace('../.', '')
     device = "auto"
+    dtype = torch.float32
     warm_step_num = 2000
     finetune_step_num = -1
-    lr = 1e-6
+    lr = 1e-4
     lr_batch_size = 256
     ema_start_step = 5000
     ema_decay_init = 0.99
@@ -31,6 +34,7 @@ def demo():
     is_metric_lower_better = False
     sample_results_freq = -1
     use_amp = False
+    quick_test = False
     n_qry = 28000
     noise_label_list = ["0_25"]
     drop_prob = 0.0
@@ -42,6 +46,7 @@ def demo():
         num_workers,
         model_file_path,
         device,
+        dtype,
         warm_step_num,
         finetune_step_num,
         lr,
@@ -55,6 +60,7 @@ def demo():
         is_metric_lower_better,
         sample_results_freq,
         use_amp,
+        quick_test,
         n_qry,
         noise_label_list,
         drop_prob,
