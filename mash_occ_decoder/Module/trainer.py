@@ -36,12 +36,14 @@ class Trainer(BaseTrainer):
         n_qry: int = 28000,
         noise_label_list: list = ["0_25"],
         drop_prob: float = 0.1,
+        kl_weight: float = 1.0,
     ) -> None:
         self.dataset_root_folder_path = dataset_root_folder_path
 
         self.n_qry = n_qry
         self.noise_label_list = noise_label_list
         self.drop_prob = drop_prob
+        self.loss_kl_weight = kl_weight
 
         self.loss_fn = nn.BCEWithLogitsLoss()
 
@@ -91,19 +93,32 @@ class Trainer(BaseTrainer):
     def preProcessData(self, data_dict: dict, is_training: bool = True) -> dict:
         if is_training:
             data_dict['drop_prob'] = self.drop_prob
+            data_dict['deterministic'] = False
         else:
             data_dict['drop_prob'] = 0.0
+            data_dict['deterministic'] = True
         return data_dict
 
     def getLossDict(self, data_dict: dict, result_dict: dict) -> dict:
         gt_occ = data_dict['occ']
         occ = result_dict['occ']
-        loss = self.loss_fn(occ, gt_occ)
+        loss_occ = self.loss_fn(occ, gt_occ)
+
+        loss_kl = 0.0
+        if 'kl' in result_dict.keys() and self.loss_kl_weight > 0.0:
+            kl = result_dict['kl']
+            loss_kl = torch.sum(kl) / kl.shape[0]
+
+        weighted_loss_kl = self.loss_kl_weight * loss_kl
+
+        loss = loss_occ + weighted_loss_kl
 
         acc = cal_occ_acc(occ, gt_occ)
         positive_occ_percent = cal_occ_positive_percent(gt_occ)
 
         loss_dict = {
+            "LossOCC": loss_occ,
+            "LossKL": loss_kl,
             "Loss": loss,
             "Accuracy": acc,
             "PositiveOCC": positive_occ_percent,

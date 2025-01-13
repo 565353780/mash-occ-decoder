@@ -14,7 +14,7 @@ class SDFDataset(Dataset):
         split: str = "train",
         n_qry: int = 200,
         noise_label: str = "0_25",
-        train_percent: float = 0.9,
+        train_percent: float = 0.99,
     ) -> None:
         self.dataset_root_folder_path = dataset_root_folder_path
         self.split = split
