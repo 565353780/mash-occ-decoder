@@ -1,5 +1,6 @@
 import os
 import torch
+import random
 import numpy as np
 from torch.utils.data import Dataset
 
@@ -89,7 +90,11 @@ class SDFDataset(Dataset):
 
         mash_params = mash_params[permute_idxs]
 
-        sdf_data = np.load(sdf_file_path)
+        try:
+            sdf_data = np.load(sdf_file_path)
+        except:
+            new_idx = random.randint(0, len(self.paths_list) - 1)
+            return self.__getitem__(new_idx)
 
         qry = sdf_data[:, :3]
         sdf = sdf_data[:, 3]

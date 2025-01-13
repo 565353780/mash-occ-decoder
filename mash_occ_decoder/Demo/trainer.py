@@ -15,10 +15,10 @@ def demo():
     assert dataset_root_folder_path is not None
 
     batch_size = 8
-    accum_iter = 64
+    accum_iter = 11
     num_workers = 16
     model_file_path = None
-    model_file_path = "../../output/512dim-v4/model_last.pth".replace('../.', '')
+    model_file_path = "../../output/512dim-v4/model_best.pth".replace('../.', '')
     device = "auto"
     dtype = torch.float32
     warm_step_num = 2000
