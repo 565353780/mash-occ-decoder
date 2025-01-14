@@ -18,7 +18,8 @@ def demo():
     accum_iter = 11
     num_workers = 16
     model_file_path = None
-    model_file_path = "../../output/512dim-v4/model_best.pth".replace('../.', '')
+    model_file_path = "../../output/noise_0_1-v1/model_last.pth".replace('../.', '')
+    weights_only = True
     device = "auto"
     dtype = torch.float32
     warm_step_num = 2000
@@ -32,7 +33,7 @@ def demo():
     save_log_folder_path = "auto"
     best_model_metric_name = 'EMA_Accuracy'
     is_metric_lower_better = False
-    sample_results_freq = -1
+    sample_results_freq = 1
     use_amp = False
     quick_test = False
     n_qry = 28000
@@ -47,6 +48,7 @@ def demo():
         accum_iter,
         num_workers,
         model_file_path,
+        weights_only,
         device,
         dtype,
         warm_step_num,

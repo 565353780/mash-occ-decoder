@@ -1,10 +1,14 @@
 import torch
 from torch import nn
+from tqdm import trange
 from typing import Union
 
 from base_trainer.Module.base_trainer import BaseTrainer
 
+from ma_sh.Model.mash import Mash
+
 from mash_occ_decoder.Dataset.sdf import SDFDataset
+from mash_occ_decoder.Method.tomesh import extractMesh
 from mash_occ_decoder.Metric.occ import cal_occ_positive_percent, cal_occ_acc
 from mash_occ_decoder.Model.mash_decoder import MashDecoder
 
@@ -17,6 +21,7 @@ class Trainer(BaseTrainer):
         accum_iter: int = 32,
         num_workers: int = 16,
         model_file_path: Union[str, None] = None,
+        weights_only: bool = False,
         device: str = "auto",
         dtype = torch.float32,
         warm_step_num: int = 2000,
@@ -49,11 +54,17 @@ class Trainer(BaseTrainer):
 
         self.loss_fn = nn.BCEWithLogitsLoss()
 
+        self.anchor_num = 400
+        self.mask_degree = 3
+        self.sh_degree = 2
+        self.gt_sample_added_to_logger = False
+
         super().__init__(
             batch_size,
             accum_iter,
             num_workers,
             model_file_path,
+            weights_only,
             device,
             dtype,
             warm_step_num,
@@ -129,3 +140,61 @@ class Trainer(BaseTrainer):
         }
 
         return loss_dict
+
+    @torch.no_grad()
+    def sampleModelStep(self, model: nn.Module, model_name: str) -> bool:
+        if self.local_rank != 0:
+            return True
+
+        sample_num = 3
+        resolution = 128
+        batch_size = 1200000
+        dataset = self.dataloader_dict['eval']["dataset"]
+
+        model.eval()
+
+        print("[INFO][Trainer::sampleModelStep]")
+        print("\t start recon", sample_num, "mashs....")
+        for i in trange(sample_num):
+            data_dict = dataset.__getitem__(i)
+
+            mash_params = data_dict['mash_params'].to(self.device)
+
+            mesh = extractMesh(mash_params, model, resolution, batch_size, 'odc')
+
+            self.logger.addMesh(model_name + "/recon_mesh_" + str(i), mesh, self.step)
+
+            mash_model = Mash(
+                self.anchor_num,
+                self.mask_degree,
+                self.sh_degree,
+                20,
+                800,
+                0.4,
+                dtype=torch.float64,
+                device=self.device,
+            )
+
+            if not self.gt_sample_added_to_logger:
+                gt_mash = dataset.normalizeInverse(mash_params)
+
+                sh2d = 2 * self.mask_degree + 1
+                ortho_poses = gt_mash[:, :6]
+                positions = gt_mash[:, 6:9]
+                mask_params = gt_mash[:, 9 : 9 + sh2d]
+                sh_params = gt_mash[:, 9 + sh2d :]
+
+                mash_model.loadParams(
+                    mask_params=mask_params,
+                    sh_params=sh_params,
+                    positions=positions,
+                    ortho6d_poses=ortho_poses,
+                )
+
+                pcd = mash_model.toSamplePcd()
+
+                self.logger.addPointCloud("GT_MASH/gt_mash_" + str(i), pcd, self.step)
+
+        self.gt_sample_added_to_logger = True
+
+        return True
