@@ -36,6 +36,7 @@ class Trainer(BaseTrainer):
         n_qry: int = 28000,
         noise_label_list: list = ["0_25"],
         drop_prob: float = 0.1,
+        mash_noise_level: float = 0.1,
         kl_weight: float = 1.0,
     ) -> None:
         self.dataset_root_folder_path = dataset_root_folder_path
@@ -43,6 +44,7 @@ class Trainer(BaseTrainer):
         self.n_qry = n_qry
         self.noise_label_list = noise_label_list
         self.drop_prob = drop_prob
+        self.mash_noise_level = mash_noise_level
         self.loss_kl_weight = kl_weight
 
         self.loss_fn = nn.BCEWithLogitsLoss()
@@ -92,8 +94,10 @@ class Trainer(BaseTrainer):
 
     def preProcessData(self, data_dict: dict, is_training: bool = True) -> dict:
         if is_training:
+            mash_params = data_dict['mash_params']
+            data_dict['mash_params'] = mash_params + self.mash_noise_level * torch.randn_like(mash_params)
             data_dict['drop_prob'] = self.drop_prob
-            data_dict['deterministic'] = False
+            data_dict['deterministic'] = self.loss_kl_weight == 0
         else:
             data_dict['drop_prob'] = 0.0
             data_dict['deterministic'] = True

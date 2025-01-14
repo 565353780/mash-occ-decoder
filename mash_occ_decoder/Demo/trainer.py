@@ -23,14 +23,14 @@ def demo():
     dtype = torch.float32
     warm_step_num = 2000
     finetune_step_num = -1
-    lr = 5e-5
+    lr = 1e-5
     lr_batch_size = 512
     ema_start_step = 5000
     ema_decay_init = 0.99
     ema_decay = 0.9999
     save_result_folder_path = "auto"
     save_log_folder_path = "auto"
-    best_model_metric_name = 'Accuracy'
+    best_model_metric_name = 'EMA_Accuracy'
     is_metric_lower_better = False
     sample_results_freq = -1
     use_amp = False
@@ -38,6 +38,7 @@ def demo():
     n_qry = 28000
     noise_label_list = ["0_25"]
     drop_prob = 0.0
+    mash_noise_level = 0.1
     kl_weight = 1.0
 
     trainer = Trainer(
@@ -65,6 +66,7 @@ def demo():
         n_qry,
         noise_label_list,
         drop_prob,
+        mash_noise_level,
         kl_weight,
     )
 

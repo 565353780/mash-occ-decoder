@@ -82,6 +82,16 @@ class SDFDataset(Dataset):
 
         mash_file_path, sdf_file_path = self.paths_list[index]
 
+        try:
+            sdf_data = np.load(sdf_file_path)
+        except:
+            new_idx = random.randint(0, len(self.paths_list) - 1)
+            return self.__getitem__(new_idx)
+
+        if np.isnan(sdf_data).any() or np.isinf(sdf_data).any():
+            new_idx = random.randint(0, len(self.paths_list) - 1)
+            return self.__getitem__(new_idx)
+
         mash_params = loadMashFileParamsTensor(mash_file_path, torch.float32, 'cpu')
 
         mash_params = self.normalize(mash_params)
@@ -89,12 +99,6 @@ class SDFDataset(Dataset):
         permute_idxs = np.random.permutation(mash_params.shape[0])
 
         mash_params = mash_params[permute_idxs]
-
-        try:
-            sdf_data = np.load(sdf_file_path)
-        except:
-            new_idx = random.randint(0, len(self.paths_list) - 1)
-            return self.__getitem__(new_idx)
 
         qry = sdf_data[:, :3]
         sdf = sdf_data[:, 3]
