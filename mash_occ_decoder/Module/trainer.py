@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 from torch import nn
 from tqdm import trange
 from typing import Union
@@ -40,19 +41,24 @@ class Trainer(BaseTrainer):
         quick_test: bool = False,
         n_qry: int = 28000,
         noise_label_list: list = ["0_25"],
-        drop_prob: float = 0.1,
-        mash_noise_level: float = 0.1,
+        train_percent: float = 0.99,
+        near_surface_dist: float = 1.0 / 512.0,
+        drop_prob: float = 0.0,
+        mash_noise_level: float = 1.0,
         kl_weight: float = 1.0,
     ) -> None:
         self.dataset_root_folder_path = dataset_root_folder_path
 
         self.n_qry = n_qry
         self.noise_label_list = noise_label_list
+        self.train_percent = train_percent
+        self.near_surface_dist = near_surface_dist
         self.drop_prob = drop_prob
         self.mash_noise_level = mash_noise_level
         self.loss_kl_weight = kl_weight
 
-        self.loss_fn = nn.BCEWithLogitsLoss()
+        self.loss_fn1 = nn.L1Loss()
+        self.loss_fn2 = nn.BCEWithLogitsLoss()
 
         self.anchor_num = 400
         self.mask_degree = 3
@@ -85,17 +91,29 @@ class Trainer(BaseTrainer):
         return
 
     def createDatasets(self) -> bool:
-        if True:
-            for noise_label in self.noise_label_list:
-                self.dataloader_dict['sdf_' + noise_label] =  {
-                    'dataset': SDFDataset(self.dataset_root_folder_path, 'train', self.n_qry, noise_label),
-                    'repeat_num': 1,
-                }
-
-        if True:
-            self.dataloader_dict['eval'] =  {
-                'dataset': SDFDataset(self.dataset_root_folder_path, 'val', self.n_qry, self.noise_label_list[0]),
+        for noise_label in self.noise_label_list:
+            self.dataloader_dict['sdf_' + noise_label] =  {
+                'dataset': SDFDataset(
+                    self.dataset_root_folder_path,
+                    'train',
+                    self.n_qry,
+                    noise_label,
+                    self.train_percent,
+                    self.near_surface_dist,
+                ),
+                'repeat_num': 1,
             }
+
+        self.dataloader_dict['eval'] =  {
+            'dataset': SDFDataset(
+                self.dataset_root_folder_path,
+                'eval',
+                self.n_qry,
+                self.noise_label_list[0],
+                self.train_percent,
+                self.near_surface_dist,
+            ),
+        }
 
         return True
 
@@ -105,8 +123,11 @@ class Trainer(BaseTrainer):
 
     def preProcessData(self, data_dict: dict, is_training: bool = True) -> dict:
         if is_training:
-            mash_params = data_dict['mash_params']
-            data_dict['mash_params'] = mash_params + self.mash_noise_level * torch.randn_like(mash_params)
+            is_add_noise = np.random.uniform(0, 1) >= 0.5
+            if is_add_noise:
+                mash_params = data_dict['mash_params']
+                data_dict['mash_params'] = mash_params + self.mash_noise_level * torch.randn_like(mash_params)
+
             data_dict['drop_prob'] = self.drop_prob
             data_dict['deterministic'] = self.loss_kl_weight == 0
         else:
@@ -117,7 +138,18 @@ class Trainer(BaseTrainer):
     def getLossDict(self, data_dict: dict, result_dict: dict) -> dict:
         gt_occ = data_dict['occ']
         occ = result_dict['occ']
-        loss_occ = self.loss_fn(occ, gt_occ)
+
+        near_surface_occ_mask = (gt_occ < 1) & (gt_occ > 0)
+        far_surface_occ_mask = ~near_surface_occ_mask
+
+        loss_near_occ = 0.0
+        loss_far_occ = 0.0
+
+        if near_surface_occ_mask.any():
+            loss_near_occ = self.loss_fn1(occ[near_surface_occ_mask], gt_occ[near_surface_occ_mask])
+
+        if far_surface_occ_mask.any():
+            loss_far_occ = self.loss_fn2(occ[far_surface_occ_mask], gt_occ[far_surface_occ_mask])
 
         loss_kl = 0.0
         if 'kl' in result_dict.keys() and self.loss_kl_weight > 0.0:
@@ -126,13 +158,14 @@ class Trainer(BaseTrainer):
 
         weighted_loss_kl = self.loss_kl_weight * loss_kl
 
-        loss = loss_occ + weighted_loss_kl
+        loss = loss_near_occ + loss_far_occ + weighted_loss_kl
 
         acc = cal_occ_acc(occ, gt_occ)
         positive_occ_percent = cal_occ_positive_percent(gt_occ)
 
         loss_dict = {
-            "LossOCC": loss_occ,
+            "LossNearOCC": loss_near_occ,
+            "LossFarOCC": loss_far_occ,
             "LossKL": loss_kl,
             "Loss": loss,
             "Accuracy": acc,

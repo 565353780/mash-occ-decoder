@@ -16,10 +16,12 @@ class SDFDataset(Dataset):
         n_qry: int = 200,
         noise_label: str = "0_25",
         train_percent: float = 0.99,
+        near_surface_dist: float = 1.0 / 512.0,
     ) -> None:
         self.dataset_root_folder_path = dataset_root_folder_path
         self.split = split
         self.n_qry = n_qry
+        self.near_surface_dist = near_surface_dist
 
         self.mash_folder_path = self.dataset_root_folder_path + "Objaverse_82K/manifold_mash/"
         assert os.path.exists(self.mash_folder_path)
@@ -103,11 +105,14 @@ class SDFDataset(Dataset):
         qry = sdf_data[:, :3]
         sdf = sdf_data[:, 3]
 
-        positive_sdf_idxs = np.where(sdf_data[:, 3] <= 0.0)[0]
-        negative_sdf_idxs = np.where(sdf_data[:, 3] > 0.0)[0]
+        positive_sdf_idxs = np.where(sdf <= 0.0)[0]
+        negative_sdf_idxs = np.where(sdf > 0.0)[0]
 
         occ = np.ones_like(sdf)
         occ[negative_sdf_idxs] = 0.0
+
+        near_surface_sdf_mask = (sdf < self.near_surface_dist) & (sdf > -self.near_surface_dist)
+        occ[near_surface_sdf_mask] = 0.5 - 0.5 / self.near_surface_dist * sdf[near_surface_sdf_mask]
 
         positive_sdf_num = self.n_qry // 2
 

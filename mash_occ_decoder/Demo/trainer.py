@@ -15,17 +15,17 @@ def demo():
     assert dataset_root_folder_path is not None
 
     batch_size = 8
-    accum_iter = 11
+    accum_iter = 22
     num_workers = 16
     model_file_path = None
-    model_file_path = "../../output/noise_0_1-v1/model_last.pth".replace('../.', '')
+    model_file_path = "../../output/noise_1-v2/model_last.pth".replace('../.', '')
     weights_only = True
     device = "auto"
     dtype = torch.float32
     warm_step_num = 2000
     finetune_step_num = -1
     lr = 1e-5
-    lr_batch_size = 512
+    lr_batch_size = 1024
     ema_start_step = 5000
     ema_decay_init = 0.99
     ema_decay = 0.9999
@@ -38,8 +38,10 @@ def demo():
     quick_test = False
     n_qry = 28000
     noise_label_list = ["0_25"]
+    train_percent = 0.99
+    near_surface_dist = 1.0 / 512.0
     drop_prob = 0.0
-    mash_noise_level = 0.1
+    mash_noise_level = 1.0
     kl_weight = 1.0
 
     trainer = Trainer(
@@ -67,6 +69,8 @@ def demo():
         quick_test,
         n_qry,
         noise_label_list,
+        train_percent,
+        near_surface_dist,
         drop_prob,
         mash_noise_level,
         kl_weight,
