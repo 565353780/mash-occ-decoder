@@ -58,7 +58,7 @@ class Trainer(BaseTrainer):
         self.loss_kl_weight = kl_weight
 
         self.loss_fn1 = nn.L1Loss()
-        self.loss_fn2 = nn.BCEWithLogitsLoss()
+        self.loss_fn2 = nn.BCELoss()
 
         self.anchor_num = 400
         self.mask_degree = 3
@@ -142,9 +142,11 @@ class Trainer(BaseTrainer):
         near_surface_occ_mask = (gt_occ < 1) & (gt_occ > 0)
         far_surface_occ_mask = ~near_surface_occ_mask
 
+        loss_near_surface_occ_weight = near_surface_occ_mask.sum() / near_surface_occ_mask.numel()
+        loss_far_surface_occ_weight = 1.0 - loss_near_surface_occ_weight
+
         loss_near_occ = 0.0
         loss_far_occ = 0.0
-
         if near_surface_occ_mask.any():
             loss_near_occ = self.loss_fn1(occ[near_surface_occ_mask], gt_occ[near_surface_occ_mask])
 
@@ -156,9 +158,11 @@ class Trainer(BaseTrainer):
             kl = result_dict['kl']
             loss_kl = torch.sum(kl) / kl.shape[0]
 
+        weighted_loss_near_occ = loss_near_surface_occ_weight * loss_near_occ
+        weighted_loss_far_occ = loss_far_surface_occ_weight * loss_far_occ
         weighted_loss_kl = self.loss_kl_weight * loss_kl
 
-        loss = loss_near_occ + loss_far_occ + weighted_loss_kl
+        loss = weighted_loss_near_occ + weighted_loss_far_occ + weighted_loss_kl
 
         acc = cal_occ_acc(occ, gt_occ)
         positive_occ_percent = cal_occ_positive_percent(gt_occ)
@@ -167,6 +171,9 @@ class Trainer(BaseTrainer):
             "LossNearOCC": loss_near_occ,
             "LossFarOCC": loss_far_occ,
             "LossKL": loss_kl,
+            "WeightedLossNearOCC": weighted_loss_near_occ,
+            "WeightedLossFarOCC": weighted_loss_far_occ,
+            "WeightedLossKL": weighted_loss_kl,
             "Loss": loss,
             "Accuracy": acc,
             "PositiveOCC": positive_occ_percent,

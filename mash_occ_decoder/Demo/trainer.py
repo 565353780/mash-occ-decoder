@@ -18,7 +18,7 @@ def demo():
     accum_iter = 22
     num_workers = 16
     model_file_path = None
-    model_file_path = "../../output/noise_1-v2/model_last.pth".replace('../.', '')
+    model_file_path = "../../output/noise_1-v3/model_last.pth".replace('../.', '')
     weights_only = True
     device = "auto"
     dtype = torch.float32

@@ -14,6 +14,7 @@ class Detector(object):
     def __init__(
         self,
         model_file_path: Union[str, None] = None,
+        use_ema: bool = True,
         batch_size: int = 1200000,
         resolution: int = 128,
         transformer_id: str = 'Objaverse_82K',
@@ -29,7 +30,7 @@ class Detector(object):
         self.model = MashDecoder().to(self.device)
 
         if model_file_path is not None:
-            self.loadModel(model_file_path)
+            self.loadModel(model_file_path, use_ema)
         return
 
     def loadModel(self, model_file_path: str, use_ema: bool = True) -> bool:

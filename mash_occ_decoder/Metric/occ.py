@@ -14,8 +14,8 @@ def cal_occ_positive_percent(gt_occ: torch.Tensor) -> float:
 
 @torch.no_grad()
 def cal_occ_acc(occ: torch.Tensor, gt_occ: torch.Tensor) -> float:
-    positive_acc_num = torch.where((occ.sigmoid() > 0.5) & (gt_occ > 0.5))[0].shape[0]
-    negative_acc_num = torch.where((occ.sigmoid() < 0.5) & (gt_occ < 0.5))[0].shape[0]
+    positive_acc_num = torch.where((occ > 0.5) & (gt_occ > 0.5))[0].shape[0]
+    negative_acc_num = torch.where((occ < 0.5) & (gt_occ < 0.5))[0].shape[0]
 
     occ_num = 1
     for size in gt_occ.shape:

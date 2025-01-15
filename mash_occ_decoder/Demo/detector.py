@@ -13,6 +13,7 @@ from mash_occ_decoder.Module.detector import Detector
 
 def demo_file():
     model_file_path = "../../output/512dim-v4/model_best.pth".replace('../.', '')
+    use_ema = True
     batch_size = 1200000
     resolution = 128
     transformer_id = 'Objaverse_82K'
@@ -26,7 +27,7 @@ def demo_file():
 
     os.makedirs(save_mesh_folder_path, exist_ok=True)
 
-    detector = Detector(model_file_path, batch_size, resolution, transformer_id, device)
+    detector = Detector(model_file_path, use_ema, batch_size, resolution, transformer_id, device)
 
     for mash_file_path in mash_file_path_list:
         print("start export mesh for mash " + mash_file_path + "...")
@@ -50,6 +51,7 @@ def demo_file():
 
 def demo_folder():
     model_file_path = "../../output/512dim-v4/model_best.pth".replace('../.', '')
+    use_ema = True
     batch_size = 1200000
     resolution = 128
     transformer_id = 'Objaverse_82K'
@@ -63,7 +65,7 @@ def demo_folder():
     dataset_root_folder_path = toDatasetRootPath()
     assert dataset_root_folder_path is not None
 
-    detector = Detector(model_file_path, batch_size, resolution, transformer_id, device)
+    detector = Detector(model_file_path, use_ema, batch_size, resolution, transformer_id, device)
 
     for root, _, files in os.walk(mash_folder_path):
         for file in files:
