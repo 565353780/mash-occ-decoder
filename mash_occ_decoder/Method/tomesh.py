@@ -18,6 +18,7 @@ def toOCC(qry: torch.Tensor,
         'mash_params': mash_params.reshape(1, -1, 25),
         'qry': qry.to(mash_params.device, dtype=mash_params.dtype).reshape(1, -1, 3),
         'drop_prob': 0.0,
+        'deterministic': True,
     }
 
     results = model(data)

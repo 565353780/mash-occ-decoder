@@ -108,6 +108,8 @@ class LatentDecoder(nn.Module):
 
         occ = self.to_outputs(latents).squeeze(-1)
 
+        occ = torch.sigmoid(occ)
+
         result_dict = {
             'occ': occ
         }

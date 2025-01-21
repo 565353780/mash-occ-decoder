@@ -123,13 +123,17 @@ class Trainer(BaseTrainer):
 
     def preProcessData(self, data_dict: dict, is_training: bool = True) -> dict:
         if is_training:
-            is_add_noise = np.random.uniform(0, 1) >= 0.5
-            if is_add_noise:
-                mash_params = data_dict['mash_params']
-                data_dict['mash_params'] = mash_params + self.mash_noise_level * torch.randn_like(mash_params)
-
             data_dict['drop_prob'] = self.drop_prob
             data_dict['deterministic'] = self.loss_kl_weight == 0
+
+            is_add_noise = np.random.uniform(0, 1) >= 0.5
+            if is_add_noise:
+                '''
+                mash_params = data_dict['mash_params']
+                data_dict['mash_params'] = mash_params + self.mash_noise_level * torch.randn_like(mash_params)
+                '''
+
+            data_dict['deterministic'] = not is_add_noise
         else:
             data_dict['drop_prob'] = 0.0
             data_dict['deterministic'] = True

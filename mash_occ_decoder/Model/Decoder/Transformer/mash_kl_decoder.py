@@ -1,3 +1,4 @@
+import torch
 from torch import nn
 
 from mash_occ_decoder.Model.Layer.pre_norm import PreNorm
@@ -91,6 +92,8 @@ class MashKLDecoder(nn.Module):
         latents = latents + self.decoder_ff(latents)
 
         occ = self.to_outputs(latents).squeeze(-1)
+
+        occ = torch.sigmoid(occ)
 
         result_dict = {
             'occ': occ,

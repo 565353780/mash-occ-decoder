@@ -5,4 +5,4 @@ from mash_occ_decoder.Model.Decoder.Transformer.latent_decoder import LatentDeco
 # from mash_occ_decoder.Model.Decoder.Mamba.mash_decoder import MashDecoder as MM
 # from mash_occ_decoder.Model.Decoder.Mamba.latent_decoder import MashDecoder as ML
 
-MashDecoder = TM
+MashDecoder = TMKL

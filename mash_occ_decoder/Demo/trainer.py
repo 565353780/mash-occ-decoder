@@ -5,20 +5,23 @@ sys.path.append('../base-trainer/')
 
 import torch
 
-from ma_sh.Config.custom_path import toDatasetRootPath
+from ma_sh.Config.custom_path import toDatasetRootPath, toModelRootPath
 
 from mash_occ_decoder.Module.trainer import Trainer
 
 
 def demo():
     dataset_root_folder_path = toDatasetRootPath()
+    model_root_folder_path = toModelRootPath()
     assert dataset_root_folder_path is not None
+    assert model_root_folder_path is not None
 
     batch_size = 8
-    accum_iter = 22
+    accum_iter = 128
     num_workers = 16
     model_file_path = None
     model_file_path = "../../output/noise_1-v3/model_last.pth".replace('../.', '')
+    model_file_path = model_root_folder_path + 'MashOCCDecoder/noise_1-0118/model_last.pth'
     weights_only = True
     device = "auto"
     dtype = torch.float32
