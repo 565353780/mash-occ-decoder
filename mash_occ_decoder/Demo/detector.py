@@ -1,29 +1,33 @@
 import sys
 
 sys.path.append("../ma-sh/")
+sys.path.append("../wn-nc/")
 sys.path.append("../distribution-manage/")
 
 import os
 
 from ma_sh.Model.mash import Mash
-from ma_sh.Config.custom_path import toDatasetRootPath
+from ma_sh.Config.custom_path import toDatasetRootPath, toModelRootPath
 
 from mash_occ_decoder.Module.detector import Detector
 
 
 def demo_file():
-    model_file_path = "../../output/512dim-v4/model_best.pth".replace('../.', '')
+    model_file_path = toModelRootPath() + "MashOCCDecoder/noise_1-0118/model_last.pth"
     use_ema = True
     batch_size = 1200000
     resolution = 128
     transformer_id = 'Objaverse_82K'
     device = "cuda:0"
     mash_file_path_list = [
-        '/home/chli/chLi/Dataset/Objaverse_82K/manifold_mash/000-091/897ce33a65d04bb69eb3d87d0742464f.npy',
-        # '/home/chli/chLi/Dataset/Objaverse_82K/manifold_mash/000-091/aba44d3812ae4377a5347b5a482f51ab.npy',
-        '/home/chli/chLi/Dataset/Objaverse_82K/manifold_mash/000-091/e7c39d9f92b94bd8a1d44986f5c37549.npy',
+        #'/home/chli/chLi/Dataset/Objaverse_82K/manifold_mash/000-091/897ce33a65d04bb69eb3d87d0742464f.npy',
+        #'/home/chli/chLi/Dataset/Objaverse_82K/manifold_mash/000-091/aba44d3812ae4377a5347b5a482f51ab.npy',
+        #'/home/chli/chLi/Dataset/Objaverse_82K/manifold_mash/000-091/e7c39d9f92b94bd8a1d44986f5c37549.npy',
+        #'/home/chli/chLi/Dataset/SimpleShapes/mesh_mash-400anc/cube.npy',
+        #'/home/chli/chLi/Dataset/SimpleShapes/mesh_mash-400anc/tetrahedron.npy',
+        '/home/chli/chLi/Dataset/KITTI/mash-400anc/city/2011_09_26/2011_09_26_drive_0001_sync/velodyne_points/data/0000000001.npy',
     ]
-    save_mesh_folder_path = './output/recon_CFM/000-091/'
+    save_mesh_folder_path = './output/SimpleShapes/'
 
     os.makedirs(save_mesh_folder_path, exist_ok=True)
 
@@ -50,7 +54,7 @@ def demo_file():
     return True
 
 def demo_folder():
-    model_file_path = "../../output/512dim-v4/model_best.pth".replace('../.', '')
+    model_file_path = toModelRootPath() + "MashOCCDecoder/noise_1-0118/model_last.pth"
     use_ema = True
     batch_size = 1200000
     resolution = 128
