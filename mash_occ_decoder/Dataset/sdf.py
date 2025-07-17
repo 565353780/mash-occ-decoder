@@ -4,8 +4,7 @@ import random
 import numpy as np
 from torch.utils.data import Dataset
 
-from ma_sh.Method.io import loadMashFileParamsTensor
-from ma_sh.Method.transformer import getTransformer
+from mash_occ_decoder.Method.io import loadMashTensor
 
 
 class SDFDataset(Dataset):
@@ -23,11 +22,16 @@ class SDFDataset(Dataset):
         self.n_qry = n_qry
         self.near_surface_dist = near_surface_dist
 
-        self.mash_folder_path = self.dataset_root_folder_path + "Objaverse_82K/manifold_mash/"
+        self.mash_folder_path = (
+            self.dataset_root_folder_path + "Objaverse_82K/manifold_mash/"
+        )
         assert os.path.exists(self.mash_folder_path)
 
         self.sdf_folder_path = (
-            self.dataset_root_folder_path + "Objaverse_82K/manifold_sdf_" + noise_label + "/"
+            self.dataset_root_folder_path
+            + "Objaverse_82K/manifold_sdf_"
+            + noise_label
+            + "/"
         )
         assert os.path.exists(self.sdf_folder_path)
 
@@ -36,17 +40,18 @@ class SDFDataset(Dataset):
         print("[INFO][SDFDataset::__init__]")
         print("\t start load dataset:", self.mash_folder_path)
         for root, _, files in os.walk(self.mash_folder_path):
-
             for file in files:
-                if not file.endswith('.npy'):
+                if not file.endswith(".npy"):
                     continue
 
-                rel_file_basepath = os.path.relpath(root, self.mash_folder_path) + '/' + file[:-4]
+                rel_file_basepath = (
+                    os.path.relpath(root, self.mash_folder_path) + "/" + file[:-4]
+                )
 
-                mash_file_path = self.mash_folder_path + rel_file_basepath + '.npy'
+                mash_file_path = self.mash_folder_path + rel_file_basepath + ".npy"
                 assert os.path.exists(mash_file_path)
 
-                sdf_file_path = self.sdf_folder_path + rel_file_basepath + '.npy'
+                sdf_file_path = self.sdf_folder_path + rel_file_basepath + ".npy"
                 if not os.path.exists(sdf_file_path):
                     continue
 
@@ -56,23 +61,18 @@ class SDFDataset(Dataset):
 
         train_data_num = max(int(len(self.paths_list) * train_percent), 1)
 
-        if self.split == 'train':
+        if self.split == "train":
             self.paths_list = self.paths_list[:train_data_num]
         else:
             self.paths_list = self.paths_list[train_data_num:]
-
-        self.transformer = getTransformer('Objaverse_82K')
-        assert self.transformer is not None
         return
-
-    def normalize(self, mash_params: torch.Tensor) -> torch.Tensor:
-        return self.transformer.transform(mash_params, False)
-
-    def normalizeInverse(self, mash_params: torch.Tensor) -> torch.Tensor:
-        return self.transformer.inverse_transform(mash_params, False)
 
     def __len__(self):
         return len(self.paths_list)
+
+    def getRandomItem(self):
+        random_idx = random.randint(0, len(self.paths_list) - 1)
+        return self.__getitem__(random_idx)
 
     def __getitem__(self, index):
         index = index % len(self.paths_list)
@@ -87,16 +87,14 @@ class SDFDataset(Dataset):
         try:
             sdf_data = np.load(sdf_file_path)
         except:
-            new_idx = random.randint(0, len(self.paths_list) - 1)
-            return self.__getitem__(new_idx)
+            return self.getRandomItem()
 
         if np.isnan(sdf_data).any() or np.isinf(sdf_data).any():
-            new_idx = random.randint(0, len(self.paths_list) - 1)
-            return self.__getitem__(new_idx)
+            return self.getRandomItem()
 
-        mash_params = loadMashFileParamsTensor(mash_file_path, torch.float32, 'cpu')
-
-        mash_params = self.normalize(mash_params)
+        mash_params = loadMashTensor(mash_file_path)
+        if mash_params is None:
+            return self.getRandomItem()
 
         permute_idxs = np.random.permutation(mash_params.shape[0])
 
@@ -111,8 +109,12 @@ class SDFDataset(Dataset):
         occ = np.ones_like(sdf)
         occ[negative_sdf_idxs] = 0.0
 
-        near_surface_sdf_mask = (sdf < self.near_surface_dist) & (sdf > -self.near_surface_dist)
-        occ[near_surface_sdf_mask] = 0.5 - 0.5 / self.near_surface_dist * sdf[near_surface_sdf_mask]
+        near_surface_sdf_mask = (sdf < self.near_surface_dist) & (
+            sdf > -self.near_surface_dist
+        )
+        occ[near_surface_sdf_mask] = (
+            0.5 - 0.5 / self.near_surface_dist * sdf[near_surface_sdf_mask]
+        )
 
         positive_sdf_num = self.n_qry // 2
 

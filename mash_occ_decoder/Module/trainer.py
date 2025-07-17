@@ -24,7 +24,7 @@ class Trainer(BaseTrainer):
         model_file_path: Union[str, None] = None,
         weights_only: bool = False,
         device: str = "auto",
-        dtype = torch.float32,
+        dtype=torch.float32,
         warm_step_num: int = 2000,
         finetune_step_num: int = -1,
         lr: float = 2e-4,
@@ -32,9 +32,9 @@ class Trainer(BaseTrainer):
         ema_start_step: int = 5000,
         ema_decay_init: float = 0.99,
         ema_decay: float = 0.999,
-        save_result_folder_path: Union[str, None] = 'auto',
-        save_log_folder_path: Union[str, None] = 'auto',
-        best_model_metric_name: Union[str, None] = 'Accuracy',
+        save_result_folder_path: Union[str, None] = "auto",
+        save_log_folder_path: Union[str, None] = "auto",
+        best_model_metric_name: Union[str, None] = "Accuracy",
         is_metric_lower_better: bool = False,
         sample_results_freq: int = -1,
         use_amp: bool = False,
@@ -92,22 +92,22 @@ class Trainer(BaseTrainer):
 
     def createDatasets(self) -> bool:
         for noise_label in self.noise_label_list:
-            self.dataloader_dict['sdf_' + noise_label] =  {
-                'dataset': SDFDataset(
+            self.dataloader_dict["sdf_" + noise_label] = {
+                "dataset": SDFDataset(
                     self.dataset_root_folder_path,
-                    'train',
+                    "train",
                     self.n_qry,
                     noise_label,
                     self.train_percent,
                     self.near_surface_dist,
                 ),
-                'repeat_num': 1,
+                "repeat_num": 1,
             }
 
-        self.dataloader_dict['eval'] =  {
-            'dataset': SDFDataset(
+        self.dataloader_dict["eval"] = {
+            "dataset": SDFDataset(
                 self.dataset_root_folder_path,
-                'eval',
+                "eval",
                 self.n_qry,
                 self.noise_label_list[0],
                 self.train_percent,
@@ -123,43 +123,49 @@ class Trainer(BaseTrainer):
 
     def preProcessData(self, data_dict: dict, is_training: bool = True) -> dict:
         if is_training:
-            data_dict['drop_prob'] = self.drop_prob
-            data_dict['deterministic'] = self.loss_kl_weight == 0
+            data_dict["drop_prob"] = self.drop_prob
+            data_dict["deterministic"] = self.loss_kl_weight == 0
 
             is_add_noise = np.random.uniform(0, 1) >= 0.5
             if is_add_noise:
-                '''
+                """
                 mash_params = data_dict['mash_params']
                 data_dict['mash_params'] = mash_params + self.mash_noise_level * torch.randn_like(mash_params)
-                '''
+                """
 
-            data_dict['deterministic'] = not is_add_noise
+            data_dict["deterministic"] = not is_add_noise
         else:
-            data_dict['drop_prob'] = 0.0
-            data_dict['deterministic'] = True
+            data_dict["drop_prob"] = 0.0
+            data_dict["deterministic"] = True
         return data_dict
 
     def getLossDict(self, data_dict: dict, result_dict: dict) -> dict:
-        gt_occ = data_dict['occ']
-        occ = result_dict['occ']
+        gt_occ = data_dict["occ"]
+        occ = result_dict["occ"]
 
         near_surface_occ_mask = (gt_occ < 1) & (gt_occ > 0)
         far_surface_occ_mask = ~near_surface_occ_mask
 
-        loss_near_surface_occ_weight = near_surface_occ_mask.sum() / near_surface_occ_mask.numel()
+        loss_near_surface_occ_weight = (
+            near_surface_occ_mask.sum() / near_surface_occ_mask.numel()
+        )
         loss_far_surface_occ_weight = 1.0 - loss_near_surface_occ_weight
 
         loss_near_occ = 0.0
         loss_far_occ = 0.0
         if near_surface_occ_mask.any():
-            loss_near_occ = self.loss_fn1(occ[near_surface_occ_mask], gt_occ[near_surface_occ_mask])
+            loss_near_occ = self.loss_fn1(
+                occ[near_surface_occ_mask], gt_occ[near_surface_occ_mask]
+            )
 
         if far_surface_occ_mask.any():
-            loss_far_occ = self.loss_fn2(occ[far_surface_occ_mask], gt_occ[far_surface_occ_mask])
+            loss_far_occ = self.loss_fn2(
+                occ[far_surface_occ_mask], gt_occ[far_surface_occ_mask]
+            )
 
         loss_kl = 0.0
-        if 'kl' in result_dict.keys() and self.loss_kl_weight > 0.0:
-            kl = result_dict['kl']
+        if "kl" in result_dict.keys() and self.loss_kl_weight > 0.0:
+            kl = result_dict["kl"]
             loss_kl = torch.sum(kl) / kl.shape[0]
 
         weighted_loss_near_occ = loss_near_surface_occ_weight * loss_near_occ
@@ -193,7 +199,7 @@ class Trainer(BaseTrainer):
         sample_num = 3
         resolution = 128
         batch_size = 1200000
-        dataset = self.dataloader_dict['eval']["dataset"]
+        dataset = self.dataloader_dict["eval"]["dataset"]
 
         model.eval()
 
@@ -202,9 +208,9 @@ class Trainer(BaseTrainer):
         for i in trange(sample_num):
             data_dict = dataset.__getitem__(i)
 
-            mash_params = data_dict['mash_params'].to(self.device)
+            mash_params = data_dict["mash_params"].to(self.device)
 
-            mesh = extractMesh(mash_params, model, resolution, batch_size, 'odc')
+            mesh = extractMesh(mash_params, model, resolution, batch_size, "odc")
 
             self.logger.addMesh(model_name + "/recon_mesh_" + str(i), mesh, self.step)
 
@@ -220,13 +226,11 @@ class Trainer(BaseTrainer):
             )
 
             if not self.gt_sample_added_to_logger:
-                gt_mash = dataset.normalizeInverse(mash_params)
-
                 sh2d = 2 * self.mask_degree + 1
-                ortho_poses = gt_mash[:, :6]
-                positions = gt_mash[:, 6:9]
-                mask_params = gt_mash[:, 9 : 9 + sh2d]
-                sh_params = gt_mash[:, 9 + sh2d :]
+                ortho_poses = mash_params[:, :6]
+                positions = mash_params[:, 6:9]
+                mask_params = mash_params[:, 9 : 9 + sh2d]
+                sh_params = mash_params[:, 9 + sh2d :]
 
                 mash_model.loadParams(
                     mask_params=mask_params,

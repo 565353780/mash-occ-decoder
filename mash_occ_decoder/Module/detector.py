@@ -3,10 +3,8 @@ import torch
 import trimesh
 from typing import Union
 
-from ma_sh.Method.io import loadMashFileParamsTensor
-from ma_sh.Method.transformer import getTransformer
-
 from mash_occ_decoder.Model.mash_decoder import MashDecoder
+from mash_occ_decoder.Method.io import loadMashTensor
 from mash_occ_decoder.Method.tomesh import extractMesh
 
 
@@ -17,15 +15,11 @@ class Detector(object):
         use_ema: bool = True,
         batch_size: int = 1200000,
         resolution: int = 128,
-        transformer_id: str = 'Objaverse_82K',
         device: str = "cpu",
     ) -> None:
         self.batch_size = batch_size
         self.resolution = resolution
         self.device = device
-
-        self.transformer = getTransformer(transformer_id)
-        assert self.transformer is not None
 
         self.model = MashDecoder().to(self.device)
 
@@ -43,23 +37,23 @@ class Detector(object):
         state_dict = torch.load(model_file_path, map_location="cpu")
 
         if use_ema:
-            model_state_dict = state_dict['ema_model']
+            model_state_dict = state_dict["ema_model"]
         else:
-            model_state_dict = state_dict['model']
+            model_state_dict = state_dict["model"]
 
         self.model.load_state_dict(model_state_dict)
         self.model.eval()
 
-        print('[INFO][Detector::loadModel]')
-        print('\t load model success!')
-        print('\t model_file_path:', model_file_path)
+        print("[INFO][Detector::loadModel]")
+        print("\t load model success!")
+        print("\t model_file_path:", model_file_path)
         return True
 
     @torch.no_grad()
     def detect(self, mash_params: torch.Tensor) -> Union[trimesh.Trimesh, None]:
-        mash_params = self.transformer.transform(mash_params)
-
-        mesh = extractMesh(mash_params, self.model, self.resolution, self.batch_size, 'odc')
+        mesh = extractMesh(
+            mash_params, self.model, self.resolution, self.batch_size, "odc"
+        )
 
         return mesh
 
@@ -71,7 +65,13 @@ class Detector(object):
             print("\t mash_params_file_path:", mash_params_file_path)
             return None
 
-        mash_params = loadMashFileParamsTensor(mash_params_file_path, torch.float32, self.device)
+        mash_params = loadMashTensor(mash_params_file_path)
+        if mash_params is None:
+            print("[ERROR][Detector::detectFile]")
+            print("\t loadMashTensor failed!")
+            return None
+
+        mash_params = mash_params.to(self.device)
 
         mesh = self.detect(mash_params)
 
